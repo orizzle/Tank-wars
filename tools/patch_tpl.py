@@ -130,47 +130,258 @@ def diff_region(old, new, mask=()):
     return p, len(old) - s, len(new) - s
 
 
-def patch_unit(tpl, name, ref, orig, ref_seg, orig_seg, ref_len, log):
-    tpu = TPU(tpl, TPUS[name])
+def _insns(buf, lo, hi):
+    from capstone import Cs, CS_ARCH_X86, CS_MODE_16
+    md = Cs(CS_ARCH_X86, CS_MODE_16)
+    out = []
+    pos = lo
+    while pos < hi:
+        got = list(md.disasm(bytes(buf[pos:pos + 16]), pos, 1))
+        if not got:
+            out.append((pos, 1, 'db'))
+            pos += 1
+            continue
+        ins = got[0]
+        out.append((pos, ins.size, ins.mnemonic + ' ' + ins.op_str))
+        pos += ins.size
+    return out
+
+
+def align_relocs(rb, ob, p0, r_old_end, r_new_end, rels, log):
+    """map relocation positions inside the changed region [p0, r_old_end) of the
+    old block to positions in the new block by aligning instruction sequences"""
+    import difflib, re as _re
+    # start decoding a little before the region at an instruction boundary: decode from 0
+    oi = _insns(rb, 0, len(rb))
+    ni = _insns(ob, 0, len(ob))
+    norm = lambda t: _re.sub(r'0x[0-9a-f]+', '#', t)
+    sm = difflib.SequenceMatcher(None, [norm(x[2]) for x in oi], [norm(x[2]) for x in ni], autojunk=False)
+    rmap = {}
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == 'replace' and i2 - i1 != j2 - j1:
+            usedj = set()
+            for (pa, la, ta) in oi[i1:i2]:
+                for e in rels:
+                    if pa <= e[4] < pa + la:
+                        fs = TPU.fsize(e)
+                        rel_ = e[4] - pa
+                        for jj in range(j1, j2):
+                            pb, lb, tb = ni[jj]
+                            if jj in usedj or lb != la:
+                                continue
+                            if ob[pb + rel_:pb + rel_ + fs] == rb[e[4]:e[4] + fs]:
+                                rmap[e[4]] = pb + rel_
+                                usedj.add(jj)
+                                break
+            continue
+        if tag == 'equal' or (tag == 'replace' and i2 - i1 == j2 - j1):
+            for k in range(i2 - i1):
+                (pa, la, ta), (pb, lb, tb) = oi[i1 + k], ni[j1 + k]
+                if la != lb and tag == 'replace':
+                    continue
+                for e in rels:
+                    if pa <= e[4] < pa + la:
+                        rmap[e[4]] = pb + (e[4] - pa)
+    return rmap
+
+
+def _para_name_ref(para):
+    for sb, se, nm in REF_SEGS:
+        if sb == para * 16:
+            return nm
+    return None
+
+
+def _para_name_orig(para):
+    for p_, nm in U.UNITS:
+        if p_ == para:
+            return nm
+    return None
+
+
+def match_far(rels, rb, ob, ref, orig, rbase, obase, p0, r_old_end, r_new_end, log):
+    """far relocations inside the changed region: match by target (unit, offset)"""
+    R = []
+    for e in rels:
+        if TPU.fsize(e) == 4 and p0 - 4 < e[4] < r_old_end:
+            lin = rbase + e[4] + 2
+            if lin in ref.reloc_set:
+                un_ = _para_name_ref(ref.w(lin))
+            R.append((e[4], un_, ('E', e[2] // 8) if un_ in ENTRY_MAPS else ref.w(lin - 2), rb[e[4] - 1]))
+    S = []
+    for qq in range(max(1, p0 - 4), r_new_end):
+        lin = obase + qq + 2
+        if lin in orig.reloc_set:
+            un_ = _para_name_orig(orig.w(lin))
+            off_ = orig.w(lin - 2)
+            if un_ in ENTRY_MAPS:
+                off_ = ('E', ENTRY_MAPS[un_].get(off_, -1))
+            S.append((qq, un_, off_, ob[qq - 1]))
+    out = {}
+    usedS = set()
+    for r in R:                      # exact (unit, offset, opcode)
+        for s_ in S:
+            if s_[0] not in usedS and s_[1:] == r[1:]:
+                out[r[0]] = s_[0]
+                usedS.add(s_[0])
+                break
+    for r in R:                      # same unit + opcode, in order
+        if r[0] in out:
+            continue
+        for s_ in S:
+            if s_[0] not in usedS and s_[1] == r[1] and s_[3] == r[3]:
+                out[r[0]] = s_[0]
+                usedS.add(s_[0])
+                break
+    left_s = [s_ for s_ in S if s_[0] not in usedS]
+    left_r = [r for r in R if r[0] not in out]
+    # same opcode, different target: the old library called another routine
+    for r in list(left_r):
+        for s_ in left_s:
+            if s_[3] == r[3]:
+                out[r[0]] = s_[0]
+                RETARGET.append((r[0], s_[0], s_[1], s_[2]))
+                log.append('   far call at %X re-targeted: %s:%s -> %s:%s (original routine)' % (r[0], r[1], r[2], s_[1], s_[2]))
+                left_s.remove(s_)
+                left_r.remove(r)
+                break
+    for r in left_r:                 # call removed in the original version
+        out[r[0]] = None
+        log.append('   far relocation at %X (%s:%s) not in the original: dropped' % (r[0], r[1], r[2]))
+    if left_s:
+        raise SystemExit('far relocations in the original without counterpart: %s' % left_s)
+    return out
+
+
+def check_far(e, op, q, rb, ob, ref, orig, ref_seg, orig_seg, p0, r_new_end, used, log):
+    """a far pointer/call relocation must land on a relocated segment word in the
+    original that points into the same unit; otherwise look for the right one"""
+    rlin = ref_seg + op + 2
+    rname = _para_name_ref(ref.w(rlin)) if rlin in ref.reloc_set else None
+    def ok(qq):
+        ol = orig_seg + qq + 2
+        return ol in orig.reloc_set and _para_name_orig(orig.w(ol)) == rname and qq not in used
+    if rname is None or ok(q):
+        return q
+    cands = [qq for qq in range(max(1, p0 - 2), r_new_end + 2) if ok(qq) and ob[qq - 1] == rb[op - 1]]
+    if not cands:
+        log.append('   far relocation at %X (to %s): no matching site in the original' % (op, rname))
+        return q
+    nq = min(cands, key=lambda x: abs(x - q))
+    log.append('   far relocation at %X (to %s): re-targeted %X -> %X' % (op, rname, q, nq))
+    return nq
+
+
+def patch_unit(tpl, name, ref, orig, ref_seg, orig_seg, ref_len, log, off=None, relayout=False):
+    tpu = TPU(tpl, TPUS[name] if off is None else off)
     where, used = locate_blocks(tpu, ref, ref_seg, ref_len)
     if abs(used - ref_len) > 15:
         raise SystemExit('%s: could not map all linked blocks (%X of %X)' % (name, used, ref_len))
-    # walk linked blocks in order, tracking accumulated size delta
-    delta_total = 0
-    changes = {}
+    # ---- align the linked blocks with the original segment
     order = sorted(where.items(), key=lambda kv: kv[1])
-    for idx, (i, rpos) in enumerate(order):
+    seg_end = ref_len
+    # original segment length (code part): next unit start - padding
+    ocands = []
+    for i, rpos in order:
         n = tpu.blocks[i][1]
-        opos = rpos + delta_total
-        nxt_rpos = order[idx + 1][1] if idx + 1 < len(order) else None
-        rb = bytes(ref.img[ref_seg + rpos:ref_seg + rpos + n])
-        # candidate original sizes: same, -2, +2, -4, +4
-        best = None
-        for dn in (0, -2, 2, -4, 4, -6, 6):
-            on = n + dn
-            ob = bytes(orig.img[orig_seg + opos:orig_seg + opos + on])
-            # the next block must follow immediately in the original too
-            if nxt_rpos is not None:
-                nb_ = order[idx + 1][0]
-                nn = tpu.blocks[nb_][1]
-                r2 = ref.img[ref_seg + nxt_rpos:ref_seg + nxt_rpos + min(nn, 24)]
-                o2 = orig.img[orig_seg + opos + on:orig_seg + opos + on + min(nn, 24)]
-                score = sum(1 for x, y in zip(r2, o2) if x == y)
-            else:
-                mask = set()
-                for e in tpu.brel[i]:
-                    for k in range(TPU.fsize(e)):
-                        mask.add(e[4] + k)
+        L_ = min(n, 24)
+        pat = bytes(tpu.masked_block(i)[:L_])
+        mask = set(k for e in tpu.brel[i] for k in range(e[4], e[4] + TPU.fsize(e)) if k < L_)
+        cands = []
+        lo, hi = max(0, rpos - 0x800), rpos + 0x800
+        for q in range(lo, hi):
+            ob2 = orig.img[orig_seg + q:orig_seg + q + L_]
+            if len(ob2) < L_:
+                break
+            mism = 0
+            for k in range(L_):
+                if k in mask or (orig_seg + q + k) in orig.reloc_set or (orig_seg + q + k - 1) in orig.reloc_set:
+                    continue
+                if ob2[k] != pat[k]:
+                    mism += 1
+                    if mism > 3:
+                        break
+            if mism <= 3:
+                cands.append((q, mism))
+        ocands.append((i, rpos, n, cands))
+    # anchors: far pointers/calls into this unit at identical sites (same segment
+    # name + offset) in the reference build and the original
+    rpara, opara = ref_seg >> 4, orig_seg >> 4
+    anchors = {}
+    rsegs = sorted(REF_SEGS) if REF_SEGS else []
+    for site in ref.reloc_lin:
+        if ref.w(site) != rpara:
+            continue
+        loc = None
+        for (sb, se, nm) in rsegs:
+            if sb <= site < se:
+                loc = (nm, site - sb)
+                break
+        if not loc or loc[0] not in ORIG_SEGS:
+            continue
+        osite = ORIG_SEGS[loc[0]] + loc[1]
+        if osite in orig.reloc_set and orig.w(osite) == opara:
+            anchors.setdefault(ref.w(site - 2), set()).add(orig.w(osite - 2))
+    for k, (i, rpos, n, cands) in enumerate(ocands):
+        if rpos in anchors and len(anchors[rpos]) == 1:
+            q = next(iter(anchors[rpos]))
+            cands[:] = [c for c in cands if c[0] != q] + [(q, -3)]     # strong preference
+    # DP: choose increasing positions; maximise matched blocks, then minimise mismatches/drift
+    best = {}            # index in order -> (score, prevstate)
+    states = []          # (k, q, score, prev)
+    import math
+    for k, (i, rpos, n, cands) in enumerate(ocands):
+        for q, mism in cands:
+            sc = (1.0 - mism * 0.2)
+            bestprev = (0.0, None)
+            for st_idx in range(len(states)):
+                k2, q2, s2, _ = states[st_idx]
+                if k2 >= k or q2 >= q:
+                    continue
+                n2 = ocands[k2][2]
+                tot = s2 + (0.5 if q == q2 + n2 else 0.0) - abs(q - (q2 + n2)) * 1e-5
+                if bestprev[1] is None or tot > bestprev[0]:
+                    bestprev = (tot, st_idx)
+            states.append((k, q, bestprev[0] + sc - (abs(q - rpos) * 1e-7 if bestprev[1] is None else 0), bestprev[1]))
+    if not states:
+        raise SystemExit('%s: no blocks aligned' % name)
+    top = max(range(len(states)), key=lambda x: states[x][2])
+    chosen = {}
+    while top is not None:
+        k, q, s_, prev = states[top]
+        chosen[k] = q
+        top = prev
+    changes = {}
+    for k, (i, rpos, n, cands) in enumerate(ocands):
+        if k not in chosen:
+            log.append('%s block %d (%X bytes) is not in the original: left unchanged '
+                       '(no longer linked once its callers use the original code)' % (name, i, n))
+            continue
+        q = chosen[k]
+        nxt = [chosen[k2] for k2 in range(k + 1, len(ocands)) if k2 in chosen]
+        if nxt:
+            on = nxt[0] - q
+        else:
+            # last block: choose the size that best matches its tail
+            best_ = None
+            rb = bytes(ref.img[ref_seg + rpos:ref_seg + rpos + n])
+            mask = set(kk for e in tpu.brel[i] for kk in range(e[4], e[4] + TPU.fsize(e)))
+            for dn in range(-0x80, 0x81):
+                on_ = n + dn
+                if on_ <= 0:
+                    continue
+                ob = bytes(orig.img[orig_seg + q:orig_seg + q + on_])
                 a_, b_, c_ = diff_region(rb, ob, mask)
-                score = -(b_ - a_)          # last block: smallest differing region wins
-            if best is None or score > best[0]:
-                best = (score, dn, ob)
-        score, dn, ob = best
+                score = -(b_ - a_) - abs(dn) * 0.001
+                if best_ is None or score > best_[0]:
+                    best_ = (score, on_)
+            on = best_[1]
+        rb = bytes(ref.img[ref_seg + rpos:ref_seg + rpos + n])
+        ob = bytes(orig.img[orig_seg + q:orig_seg + q + on])
         if ob == rb:
             continue
-        changes[i] = (rb, ob, dn)
-        delta_total += dn
-    for i, (rb, ob, dn) in changes.items():
+        changes[i] = (rb, ob, on - n, rpos, q)
+    for i, (rb, ob, dn, b_rpos, b_q) in changes.items():
         oldb = tpu.block(i)
         mask = set()
         for e in tpu.brel[i]:
@@ -180,16 +391,23 @@ def patch_unit(tpl, name, ref, orig, ref_seg, orig_seg, ref_len, log):
         if dn:
             # precise region: window [k, k+w) (old) / [k, k+w+dn) (new) minimising mismatches outside
             n_, D_ = len(rb), -dn
+            WMAX = n_
+            soft = set()       # branch displacements: expected to differ when code moves
+            for (pa, la, ta) in _insns(rb, 0, len(rb)):
+                mn_ = ta.split()[0] if ta else ''
+                if (mn_.startswith('j') or mn_ in ('call', 'loop', 'loope', 'loopne', 'jcxz')) and la in (2, 3):
+                    for kk in range(pa + 1, pa + la):
+                        soft.add(kk)
             pre = [0]
             for x in range(n_):
-                pre.append(pre[-1] + (0 if (x in mask or x >= len(ob) or rb[x] == ob[x]) else 1))
+                pre.append(pre[-1] + (0 if (x in mask or x in soft or x >= len(ob) or rb[x] == ob[x]) else 1))
             suf = [0] * (n_ + 1)
             for x in range(n_ - 1, -1, -1):
                 y = x - D_
-                suf[x] = suf[x + 1] + (0 if (x in mask or y < 0 or rb[x] == ob[y]) else 1)
+                suf[x] = suf[x + 1] + (0 if (x in mask or x in soft or y < 0 or rb[x] == ob[y]) else 1)
             best_ = None
             for k in range(n_):
-                for w in range(max(D_, 1), min(0x60, n_ - k) + 1):
+                for w in range(max(D_, 1), min(WMAX, n_ - k) + 1):
                     c = pre[k] + suf[k + w] + w * 0.001
                     if best_ is None or c < best_[0]:
                         best_ = (c, k, w)
@@ -197,6 +415,13 @@ def patch_unit(tpl, name, ref, orig, ref_seg, orig_seg, ref_len, log):
             p0, r_old_end, r_new_end = k, k + w, k + w - D_
             log.append('   precise region %X-%X, %d displacement bytes differ outside it' % (k, k + w, int(c)))
         log.append('%s block %d: region %X-%X -> %X bytes (size %+d)' % (name, i, p0, r_old_end, r_new_end - p0, dn))
+        rmap = align_relocs(rb, ob, p0, r_old_end, r_new_end, tpu.brel[i], log)
+        used_q = set()
+        farmap = {}
+        del RETARGET[:]
+        if REF_SEGS:
+            farmap = match_far(tpu.brel[i], rb, ob, ref, orig, ref_seg + b_rpos, orig_seg + b_q,
+                               p0, r_old_end, r_new_end, log)
         # new block bytes = original's, with relocation fields restored from the TPU
         nbk = bytearray(ob)
         D = -dn                        # bytes removed
@@ -207,23 +432,43 @@ def patch_unit(tpl, name, ref, orig, ref_seg, orig_seg, ref_len, log):
             if e[4] >= r_old_end:
                 e[4] -= D
             elif e[4] + TPU.fsize(e) > p0:
-                # relocation inside the changed region: find the same instruction in the original
-                fs = TPU.fsize(e)
-                cands = [q for q in range(max(0, p0 - 2), min(len(ob) - fs, r_new_end + 2) + 1)
-                         if ob[q:q + fs] == rb[op:op + fs] and ob[q - 1] == rb[op - 1]]
-                if not cands:   # e.g. same operand, different register (modrm differs)
-                    cands = [q for q in range(max(0, p0 - 2), min(len(ob) - fs, r_new_end + 2) + 1)
-                             if ob[q:q + fs] == rb[op:op + fs]]
-                if not cands:
-                    raise SystemExit('%s block %d: relocation at %X not found in new region' % (name, i, op))
-                q = min(cands, key=lambda x: abs(x - op))
+                # relocation inside the changed region: use the instruction alignment
+                q = rmap.get(op)
+                if TPU.fsize(e) == 4 and op in farmap:
+                    q = farmap[op]
+                    for (rop, rq, tun, toff) in RETARGET:
+                        if rop == op and rq == q:
+                            PENDING.append((name, i, q, tun, toff))
+                if q is not None:
+                    used_q.add(q)
+                if q is None:
+                    log.append('   relocation at %X (%s): instruction deleted in the original, dropped' % (op, e))
+                    continue
                 if q != op:
                     log.append('   relocation moved %X -> %X' % (op, q))
                 e[4] = q
             for k in range(TPU.fsize(e)):
                 nbk[e[4] + k] = oldb[op + k]
             newrel.append(e)
+        if REF_SEGS:
+            # validation: far relocations must sit on relocated words of the original
+            obase = orig_seg + b_q
+            keep = []
+            for e in newrel:
+                if TPU.fsize(e) == 4 and (obase + e[4] + 2) not in orig.reloc_set:
+                    log.append('   far relocation %s does not match a relocated word in the original: dropped' % (e,))
+                    for k in range(4):
+                        nbk[e[4] + k] = ob[e[4] + k]
+                    continue
+                keep.append(e)
+            newrel = keep
+            covered = set(e[4] + 2 for e in newrel if TPU.fsize(e) == 4) | set(e[4] for e in newrel if TPU.fsize(e) == 2)
+            for k in range(len(ob) - 1):
+                if (obase + k) in orig.reloc_set and k not in covered:
+                    log.append('   WARNING: relocated word at %X in the original has no relocation' % k)
+        newrel.sort(key=lambda e: e[4])      # TPC emits relocations in position order
         tpu.brel[i] = newrel
+        tpu.blocks[i][2] = 8 * len(newrel)
         s = tpu.bstart[i]
         tpu.code[s:s + len(oldb)] = nbk
         if D:
@@ -244,6 +489,8 @@ def patch_unit(tpl, name, ref, orig, ref_seg, orig_seg, ref_len, log):
     t = tpu.off
     hdr = tpu.hdr
     hdr[11] = tpu.code_size
+    if relayout:
+        return serialise_relayout(tpu, tpl), len(changes)
     assert a16(tpu.code_off + tpu.code_size) == tpu.const_off, 'code shrink crosses alignment'
     struct.pack_into('<32H', tpl, t + 8, *hdr)
     for k, b in enumerate(tpu.blocks):
@@ -258,7 +505,122 @@ def patch_unit(tpl, name, ref, orig, ref_seg, orig_seg, ref_len, log):
     return len(changes)
 
 
+def serialise_relayout(tpu, d):
+    """rebuild a standalone TPU file: header+tables, code, typed consts,
+    code relocations, typed-const relocations (header word 14)"""
+    assert tpu.off == 0
+    h = tpu.hdr
+    old_crel_off = a16(tpu.reloc_off + tpu.reloc_size)
+    crel = bytes(d[old_crel_off:old_crel_off + h[14]])
+    consts = bytes(d[tpu.const_off:tpu.const_off + tpu.const_size])
+    allrel = [e for bl in tpu.brel for e in bl] + tpu.other_rel
+    h[11] = tpu.code_size
+    h[13] = 8 * len(allrel)
+    out = bytearray(d[:tpu.code_off])
+    struct.pack_into('<32H', out, 8, *h)
+    for k, b in enumerate(tpu.blocks):
+        struct.pack_into('<4H', out, tpu.blk_tab + 8 * k, *b)
+    for k, e in enumerate(tpu.entries):
+        struct.pack_into('<4H', out, tpu.ent_tab + 8 * k, *e)
+    def pad():
+        out.extend(b'\0' * (a16(len(out)) - len(out)))
+    out += tpu.code[:tpu.code_size]; pad()
+    out += consts; pad()
+    for e in allrel:
+        out += struct.pack('<BBHHH', *e)
+    pad()
+    out += crel; pad()
+    return bytes(out)
+
+
+RETARGET = []      # (old pos, new pos, target unit, orig target offset) for the current block
+PENDING = []       # (unit, block, pos, target unit, orig target offset): relocations to re-target
+REF_SEGS = []      # [(start, end, name)] of the reference build (set by patch_tv)
+ORIG_SEGS = {}     # name -> linear start in the original (user units + DATA only)
+TV_FILES = ('VIEWS', 'DIALOGS')     # Views first: Dialogs' calls into Views are matched by entry
+ENTRY_MAPS = {}    # unit -> {orig offset: entry index} for already patched units      # standalone Turbo Vision TPUs patched against BOMBCFG.EXE
+
+
+def patch_tv(ref_exe):
+    """patch toolchain/tp6/<unit>.tpu (from .pristine) against orig/BOMBCFG.EXE;
+    ref_exe = a BOMBCFG --final build linked with the pristine TV units"""
+    os.environ['TW_TARGET'] = 'BOMBCFG'
+    import importlib
+    importlib.reload(U)
+    ref = exe.MZ(ref_exe)
+    mp = exe.load_map(os.path.splitext(ref_exe)[0] + '.MAP')
+    rseg = {n: (s, e + 1 - s) for s, e, n, c in mp['segments']}
+    orig = exe.MZ(os.path.join(ROOT, 'orig', 'BOMBCFG.EXE'))
+    oseg = {n: a for n, s, a, e in U.unit_bounds(0)}
+    global REF_SEGS, ORIG_SEGS
+    REF_SEGS = [(s, e + 1, n) for s, e, n, c in mp['segments']]
+    ORIG_SEGS = {n: a for n, a in oseg.items() if n not in U.LIB}
+    ORIG_SEGS['DATA'] = U.DSEG * 16
+    log = []
+    for name in TV_FILES:
+        fn = os.path.join(TPD, name.lower() + '.tpu')
+        data = bytearray(open(fn + '.pristine', 'rb').read())
+        s, ln = rseg[name]
+        out, n = patch_unit(data, name, ref, orig, s, oseg[name], ln, log, off=0, relayout=True)
+        open(fn, 'wb').write(out)
+        log.append('%s.tpu: %d blocks rewritten, %d -> %d bytes' % (name.lower(), n, len(data), len(out)))
+        tt = TPU(out, 0)
+        seglen = [e - a for n_, s_, a, e in U.unit_bounds(0) if n_ == name][0]
+        where, used = locate_blocks(tt, orig, oseg[name], seglen)
+        ENTRY_MAPS[name] = {where[e[2] // 8] + e[3]: k for k, e in enumerate(tt.entries)
+                            if e[2] % 8 == 0 and (e[2] // 8) in where}
+    for (uname, bi, pos, tun, toff) in PENDING:
+        log.append(resolve_retarget(uname, bi, pos, tun, toff, orig, oseg))
+    return log
+
+
+def unit_list(tpu, d):
+    """TPU unit list (header words 7..8): {name: offset} = the unit index used in relocations"""
+    a, b = tpu.hdr[7], tpu.hdr[8]
+    out = {}
+    p = a
+    while p < b:
+        ln = d[p + 2]
+        out[bytes(d[p + 3:p + 3 + ln]).decode()] = p - a
+        p += 3 + ln
+    return out
+
+
+def resolve_retarget(uname, bi, pos, tun, toff, orig, oseg):
+    fn = os.path.join(TPD, uname.lower() + '.tpu')
+    d = bytearray(open(fn, 'rb').read())
+    t = TPU(d, 0)
+    ul = unit_list(t, d)
+    if tun not in ul:
+        raise SystemExit('%s does not use %s' % (uname, tun))
+    # entry of the target unit linked at orig offset toff
+    tfn = os.path.join(TPD, tun.lower() + '.tpu')
+    td = open(tfn, 'rb').read()
+    tt = TPU(td, 0)
+    seg = oseg[tun]
+    seglen = [e - a for n, s, a, e in U.unit_bounds(0) if n == tun][0]
+    where, used = locate_blocks(tt, orig, seg, seglen)
+    ent = toff[1] if isinstance(toff, tuple) else None
+    for k, e in enumerate(tt.entries if ent is None else []):
+        if e[2] % 8 == 0 and (e[2] // 8) in where and where[e[2] // 8] + e[3] == toff:
+            ent = k
+            break
+    if ent is None:
+        raise SystemExit('no entry of %s at %s' % (tun, toff))
+    for bl in t.brel:
+        pass
+    e = [x for x in t.brel[bi] if x[4] == pos][0]
+    old = list(e)
+    e[0], e[2], e[3] = ul[tun], ent * 8, 0
+    out = serialise_relayout(t, d)
+    open(fn, 'wb').write(out)
+    return '%s block %d: relocation %s -> %s (%s entry %d)' % (uname, bi, old, e, tun, ent)
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == '--tv':
+        print('\n'.join(patch_tv(sys.argv[2])))
+        return
     if len(sys.argv) != 2:
         sys.exit(__doc__)
     ref = exe.MZ(sys.argv[1])

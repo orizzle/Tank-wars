@@ -1,7 +1,7 @@
 """For each library routine of the original (chunk starting at a far target),
 check whether its normalised instruction sequence occurs in the build's segment."""
 import sys, os, struct
-sys.path.insert(0, '/vmstore/claude/bomb/decomp/tools')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ['TW_TARGET'] = 'BOMBCFG'
 import exe, units as U
 from capstone import *
