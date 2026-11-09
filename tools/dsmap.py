@@ -5,7 +5,7 @@ import exe, tpdis, units as U
 from collections import defaultdict
 
 def refs(m=None):
-    m = m or exe.MZ(os.path.join(exe.ROOT, 'orig', 'BOMB.EXE'))
+    m = m or exe.MZ(U.ORIG)
     d = tpdis.Disasm(m).run()
     allref = defaultdict(lambda: defaultdict(set))
     for dct, k in ((d.dsrefs, 'd'), (d.dsidx, 'i'), (d.dsptr, 'p')):

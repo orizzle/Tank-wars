@@ -12,6 +12,8 @@ usage: build.py [--work DIR] [--mine U0728,U0E9B] [--quiet]
 Exit status 0 on success; compiler output is printed.
 """
 import sys, os, shutil, subprocess, argparse, re, fcntl, time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import units as U
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -41,7 +43,7 @@ exit
 def run_tpc(work, args):
     conf = os.path.join(work, '_dosbox.conf')
     open(conf, 'w').write(CONF.format(work=work, tp=TP, args=args))
-    for f in ('TPC.OUT', 'BOMB.EXE'):
+    for f in ('TPC.OUT', U.MAIN + '.EXE'):
         try:
             os.remove(os.path.join(work, f))
         except FileNotFoundError:
@@ -82,12 +84,15 @@ def owner_unit(fname):
     return m.group(1) if m else b
 
 
+USER_UNITS = set(n for _, n in U.UNITS if n not in U.LIB and n not in ('DATA', 'STACK'))
+
+
 def gen_keepall(work):
     """KEEPALL.INC: takes the address of every procedure that has a {#MARKER}
     so that the smart linker keeps it even while its callers are unfinished."""
     refs = []
     for f in sorted(os.listdir(work)):
-        if not f.upper().endswith(('.PAS', '.INC')) or f.upper().startswith('BOMB'):
+        if not f.upper().endswith(('.PAS', '.INC')) or owner_unit(f) not in USER_UNITS or f.upper() == 'KEEPALL.INC':
             continue
         txt = open(os.path.join(work, f), 'rb').read().decode('latin1').split('\n')
         HDR = re.compile(r'^\s*(?:procedure|function|constructor|destructor)\s+([A-Za-z_][\w.]*)', re.I)
@@ -117,7 +122,7 @@ def gen_keepall(work):
                 refs.append(name)
     # one typed constant and one variable per unit (data blocks are smart-linked per unit)
     for f in sorted(os.listdir(work)):
-        if not f.upper().endswith('.PAS') or f.upper().startswith('BOMB'):
+        if not f.upper().endswith('.PAS') or owner_unit(f) == U.MAIN or owner_unit(f) not in USER_UNITS:
             continue
         txt = open(os.path.join(work, f), 'rb').read().decode('latin1').split('\n')
         sect = None
@@ -159,7 +164,9 @@ def main():
             if os.path.isfile(p):
                 os.remove(p)
     os.makedirs(work, exist_ok=True)
-    copy_tree(SRC, work)
+    for sd in U.SRCDIRS:
+        if os.path.isdir(os.path.join(ROOT, sd)):
+            copy_tree(os.path.join(ROOT, sd), work)
     # hand-written external code: NAME.ASM -> NAME.BIN (NASM, flat binary, no fixups)
     for f in os.listdir(work):
         if f.upper().endswith('.ASM'):
@@ -189,11 +196,11 @@ def main():
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
     if not a.final:
         gen_keepall(work)
-    flags = '/B /GD /Q %sBOMB.PAS' % ('' if a.final else '/DKEEPALL ')
-    SNAP = os.path.join(ROOT, 'build', 'lkg_full')
+    flags = '/B /GD /Q %s%s.PAS' % ('' if a.final else '/DKEEPALL ', U.MAIN)
+    SNAP = os.path.join(ROOT, 'build', 'lkg_full' + ('' if U.TARGET == 'BOMB' else '_' + U.TARGET))
     used_snapshot = False
     out = run_tpc(work, flags)
-    ok = os.path.exists(os.path.join(work, 'BOMB.EXE')) and 'Error' not in out
+    ok = os.path.exists(os.path.join(work, U.MAIN + '.EXE')) and 'Error' not in out
     if not ok and not a.no_lkg and mine and os.path.isdir(SNAP):
         m = re.search(r'([A-Z0-9_]+\.(?:PAS|INC))\((\d+)\): (ERROR.*)', out.upper())
         if m and owner_unit(m.group(1)) not in mine:
@@ -208,14 +215,18 @@ def main():
             for f in os.listdir(SNAP):
                 if owner_unit(f) not in mine:
                     shutil.copy2(os.path.join(SNAP, f), os.path.join(work, f))
-            for f in os.listdir(SRC):
-                if owner_unit(f) in mine or not f.upper().endswith(('.PAS', '.INC')):
-                    if os.path.isfile(os.path.join(SRC, f)):
-                        shutil.copy2(os.path.join(SRC, f), os.path.join(work, f))
+            for sd in U.SRCDIRS:
+                sdp = os.path.join(ROOT, sd)
+                if not os.path.isdir(sdp):
+                    continue
+                for f in os.listdir(sdp):
+                    if owner_unit(f) in mine or not f.upper().endswith(('.PAS', '.INC')):
+                        if os.path.isfile(os.path.join(sdp, f)):
+                            shutil.copy2(os.path.join(sdp, f), os.path.join(work, f))
             if not a.final:
                 gen_keepall(work)
             out = run_tpc(work, flags)
-            ok = os.path.exists(os.path.join(work, 'BOMB.EXE')) and 'Error' not in out
+            ok = os.path.exists(os.path.join(work, U.MAIN + '.EXE')) and 'Error' not in out
             used_snapshot = True
     if not a.quiet or not ok:
         print(out.strip())

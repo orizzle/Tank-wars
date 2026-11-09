@@ -154,3 +154,15 @@ release. The untouched file is kept as `turbo.tpl.pristine`.
    the scratchpad is shared.
 8. Signatures recently fixed by owners: see the interfaces of U27B1, U27D4,
    U2823, U2918, U2968 (0067/006F/00B1 now return Integer), U0098, U2390, U0728.
+
+## Second target: BOMBCFG.EXE (configuration program, Turbo Vision)
+Select it with the environment variable `TW_TARGET=BOMBCFG` for every tool
+(`TW_TARGET=BOMBCFG python3 tools/build.py ...`, `... tools/cmp.py ...`,
+`... tools/tpdis.py` -> listings in build/dis_bombcfg/). Sources: `src_cfg/`
+(overlays `src/`; the shared units U2918 and U2968 come from `src/` and must
+keep BOMB.EXE matching too). Unit map (memory order): BOMBCFG(main) C0453
+MSGBOX C04B6 U2918 U2968 | Printer Graph Crt Dialogs App Menus Views HistList
+Memory Drivers Objects Dos System. Turbo Vision units are Borland TPUs in
+toolchain/tp6 (MsgBox too; its source msgbox.pas is on the TP6 disk).
+KEEPALL.INC must be included in the main program after its procedures and
+before the main `begin` (see src/BOMB.PAS).

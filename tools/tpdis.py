@@ -351,8 +351,8 @@ class Disasm:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('exe', nargs='?', default=os.path.join(exe.ROOT, 'orig', 'BOMB.EXE'))
-    ap.add_argument('--out', default=os.path.join(exe.ROOT, 'build', 'dis'))
+    ap.add_argument('exe', nargs='?', default=U.ORIG)
+    ap.add_argument('--out', default=os.path.join(exe.ROOT, 'build', 'dis' if U.TARGET == 'BOMB' else 'dis_' + U.TARGET.lower()))
     ap.add_argument('--unit')
     a = ap.parse_args()
     m = exe.MZ(a.exe)

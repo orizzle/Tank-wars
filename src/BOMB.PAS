@@ -12,10 +12,6 @@ uses
   U23C3, U0040, U0098, U0728, U0E9B, U1615,
   U1B27, U1DD4, U1F69, U20C6, U22B7, U2390;
 
-{$IFDEF KEEPALL}
-{$I KEEPALL.INC}
-{$ENDIF}
-
 {#BOMB_0000}
 procedure BombExit;
 begin
@@ -29,6 +25,10 @@ begin
   U2918_000F;
   ExitProc := g_46F8;
 end;
+
+{$IFDEF KEEPALL}
+{$I KEEPALL.INC}
+{$ENDIF}
 
 {#BOMB_0102}
 begin

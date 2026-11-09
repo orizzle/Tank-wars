@@ -24,8 +24,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import exe, tpdis, units as U
 
 ROOT = exe.ROOT
-ORIG = os.path.join(ROOT, 'orig', 'BOMB.EXE')
-CACHE = os.path.join(ROOT, 'build', 'orig_procs.json')
+ORIG = U.ORIG
+CACHE = os.path.join(ROOT, 'build', 'orig_procs%s.json' % ('' if U.TARGET == 'BOMB' else '_' + U.TARGET))
 
 
 class Side:
@@ -117,8 +117,8 @@ def find_markers(work):
 
 
 def new_side(work):
-    m = exe.MZ(os.path.join(work, 'BOMB.EXE'))
-    mp = exe.load_map(os.path.join(work, 'BOMB.MAP'))
+    m = exe.MZ(os.path.join(work, U.MAIN + '.EXE'))
+    mp = exe.load_map(os.path.join(work, U.MAIN + '.MAP'))
     table = []
     dseg = None
     for start, stop, name, cls in mp['segments']:
@@ -133,7 +133,7 @@ def new_side(work):
     # re-parse to keep the file name too.
     lines = {}
     cur = None
-    for ln in open(os.path.join(work, 'BOMB.MAP'), 'r', errors='replace'):
+    for ln in open(os.path.join(work, U.MAIN + '.MAP'), 'r', errors='replace'):
         s = ln.strip()
         mm = re.match(r'Line numbers for (\w+)\(([^)]+)\) segment (\w+)', s)
         if mm:
@@ -377,7 +377,7 @@ def main():
     work = os.path.abspath(a.work)
     if a.full:
         o = open(ORIG, 'rb').read()
-        n = open(os.path.join(work, 'BOMB.EXE'), 'rb').read()
+        n = open(os.path.join(work, U.MAIN + '.EXE'), 'rb').read()
         if o == n:
             print('IDENTICAL (%d bytes)' % len(o))
             return 0
@@ -386,7 +386,7 @@ def main():
         print('%d differing bytes in common length; first at file offset %s' % (len(diffs), hex(diffs[0]) if diffs else '-'))
         return 1
     if a.layout:
-        mp = exe.load_map(os.path.join(work, 'BOMB.MAP'))
+        mp = exe.load_map(os.path.join(work, U.MAIN + '.MAP'))
         dseg = [s_ >> 4 for s_, e_, n_, c_ in mp['segments'] if n_ == 'DATA'][0]
         bad = 0
         n = 0
