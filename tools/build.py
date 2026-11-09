@@ -160,6 +160,15 @@ def main():
                 os.remove(p)
     os.makedirs(work, exist_ok=True)
     copy_tree(SRC, work)
+    # hand-written external code: NAME.ASM -> NAME.BIN (NASM, flat binary, no fixups)
+    for f in os.listdir(work):
+        if f.upper().endswith('.ASM'):
+            b = os.path.splitext(f)[0] + '.BIN'
+            r = subprocess.run(['nasm', '-f', 'bin', '-o', os.path.join(work, b), os.path.join(work, f)],
+                               capture_output=True, text=True)
+            if r.returncode:
+                print(r.stderr)
+                sys.exit(1)
     # binary blobs -> OBJ via Borland BINOBJ (list in src/BINOBJ.LST: file public)
     lst = os.path.join(work, 'BINOBJ.LST')
     if os.path.exists(lst):
