@@ -42,6 +42,14 @@ UNITS = [
 LIB = {'PRINTER', 'DOS', 'CRT', 'GRAPH', 'SYSTEM'}
 DSEG = 0x328D
 SRCDIRS = ['src']
+# original procedure names to rename / drop when reading the original EXE (see BOMBCFG)
+PROC_ALIAS = {}
+PROC_DROP = set()
+# markers that dev builds must NOT reference via KEEPALL ({unit: set(markers)} = keep only these)
+KEEPALL_SKIP = {'U2918_00A5'}      # BOMBCFG-only function of U2918 (smart-linked out of BOMB.EXE)
+KEEPALL_ONLY = {}
+# --layout: names carrying another target's DS offset: [(lo, hi, delta)] -> expected = name + delta
+LAYOUT_REMAP = []
 
 if TARGET == 'BOMBCFG':
     UNITS = [
@@ -71,6 +79,18 @@ if TARGET == 'BOMBCFG':
            'HISTLIST', 'MEMORY', 'DRIVERS', 'OBJECTS'}
     DSEG = 0x146F
     SRCDIRS = ['src', 'src_cfg']    # src_cfg overrides / adds to src
+    # The shared units keep the marker names of BOMB.EXE (src/U2918.PAS, src/U2968.PAS),
+    # so the BOMBCFG procedures of those units are renamed to their BOMB names.
+    # U2918_00A5 (BOMBCFG offset) is a function that BOMB.EXE does not link.
+    PROC_ALIAS = {'U2918_0000': 'U2918_015D', 'U2918_002D': 'U2918_0286', 'U2918_00DD': 'U2918_02FE',
+                  'U2918_0116': 'U2918_03A9', 'U2918_014E': 'U2918_03E1', 'U2968_0000': 'U2968_00DD'}
+    PROC_DROP = {'U2918_0129'}      # strings of U2918's init part, misdetected as a procedure
+    KEEPALL_SKIP = set()
+    # U2918/U2968 globals are named by their BOMB.EXE offsets (E7E2-E821); in BOMBCFG
+    # their var blocks are at 1120-115F
+    LAYOUT_REMAP = [(0xE7E2, 0xE822, 0x1120 - 0xE7E2)]
+    KEEPALL_ONLY = {'U2918': {'U2918_015D', 'U2918_0286', 'U2918_00A5', 'U2918_02FE', 'U2918_03A9'},
+                    'U2968': set()}
 IMG_END_PARA = None  # filled by tools
 
 

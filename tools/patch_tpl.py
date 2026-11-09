@@ -276,6 +276,62 @@ def main():
     open(os.path.join(TPD, 'turbo.tpl'), 'wb').write(tpl)
     print('\n'.join(log))
     print('turbo.tpl written (OvrEmsHandle + %d code blocks patched)' % len(log))
+    print(patch_drivers())
+
+
+def patch_drivers():
+    """Turbo Vision DRIVERS.TPU: the original (1990) CtrlToArrow knows 10 control
+    keys; the 1991 unit added ^H -> kbBack (11 entries).  Restore the 10-entry
+    tables (typed constants CtrlCodes/ArrowCodes) and the loop bound."""
+    src = os.path.join(TPD, 'drivers.tpu.pristine')
+    if not os.path.exists(src):
+        return 'drivers.tpu.pristine missing - skipped'
+    d = bytearray(open(src, 'rb').read())
+    t = TPU(d, 0)
+    h = t.hdr
+    cblk_tab = h[4]
+    cblocks = [list(struct.unpack('<4H', d[cblk_tab + 8 * i:cblk_tab + 8 * i + 8])) for i in range((h[5] - cblk_tab) // 8)]
+    assert cblocks[5][1] == 34
+    cstart = sum(b[1] for b in cblocks[:5])
+    consts = bytearray(d[t.const_off:t.const_off + t.const_size])
+    old = consts[cstart:cstart + 34]
+    assert old[:11] == bytes([0x13, 4, 5, 0x18, 1, 6, 7, 0x16, 0x12, 3, 8])
+    new = old[:10] + old[12:12 + 20]          # drop ^H, the pad byte and kbBack
+    consts[cstart:cstart + 34] = new
+    cblocks[5][1] = 30
+    # CtrlToArrow (code block 25): loop bound and ArrowCodes reference
+    b = 25
+    s0 = t.bstart[b]
+    blk = t.code[s0:s0 + t.blocks[b][1]]
+    k = bytes(blk).find(bytes.fromhex('837EFC0A'))
+    assert k > 0
+    t.code[s0 + k + 3] = 9
+    n = 0
+    for e in t.brel[b]:
+        if e[0] == 0 and e[2] == 5 * 8 and e[3] == 12:
+            e[3] = 10
+            n += 1
+    assert n == 1
+    # re-lay out the file: header, tables, code, consts, code relocs, const relocs
+    const_size = t.const_size - 4
+    const_rel_size = h[14]
+    const_rel = d[a16(t.reloc_off + t.reloc_size):a16(t.reloc_off + t.reloc_size) + const_rel_size]
+    h[12] = const_size
+    struct.pack_into('<32H', d, 8, *h)
+    for i, cb in enumerate(cblocks):
+        struct.pack_into('<4H', d, cblk_tab + 8 * i, *cb)
+    out = bytearray(d[:t.code_off])
+    out += t.code
+    out += b'\0' * (a16(len(out)) - len(out))
+    out += consts[:const_size]
+    out += b'\0' * (a16(len(out)) - len(out))
+    for e in [e for bl in t.brel for e in bl] + t.other_rel:
+        out += struct.pack('<BBHHH', *e)
+    out += b'\0' * (a16(len(out)) - len(out))
+    out += const_rel
+    out += b'\0' * (a16(len(out)) - len(out))
+    open(os.path.join(TPD, 'drivers.tpu'), 'wb').write(out)
+    return 'drivers.tpu written (CtrlToArrow: 10 control keys)'
 
 
 if __name__ == '__main__':

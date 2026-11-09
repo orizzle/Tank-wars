@@ -98,6 +98,7 @@ def orig_side():
                                                       end=d.code_end.get(p, p) - u[2])
         os.makedirs(os.path.dirname(CACHE), exist_ok=True)
         json.dump(info, open(CACHE, 'w'), indent=0)
+    info = {U.PROC_ALIAS.get(k, k): v for k, v in info.items() if k not in U.PROC_DROP}
     procs = {k: (v['unit'], v['off']) for k, v in info.items()}
     s = Side(m, U.UNITS, U.DSEG, procs)
     s.info = info
@@ -394,7 +395,11 @@ def main():
             mm = re.search(r'_([0-9A-F]{4})$', nm)
             if sg == dseg and mm:
                 n += 1
-                if int(mm.group(1), 16) != of:
+                want = int(mm.group(1), 16)
+                for lo_, hi_, delta_ in getattr(U, 'LAYOUT_REMAP', ()):
+                    if lo_ <= want < hi_:
+                        want = (want + delta_) & 0xFFFF
+                if want != of:
                     bad += 1
                     print('  %-24s is at DS:%04X' % (nm, of))
         print('layout: %d of %d offset-named globals misplaced' % (bad, n))

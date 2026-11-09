@@ -118,6 +118,12 @@ def gen_keepall(work):
                         break
                     if re.match(r'^\s*(implementation|interface)\s*$', txt[j], re.I):
                         break
+            mk = re.search(r'\{#([A-Z0-9]+_[0-9A-F]{4})\}', l).group(1)
+            if mk in getattr(U, 'KEEPALL_SKIP', ()):
+                continue
+            only = getattr(U, 'KEEPALL_ONLY', {}).get(owner_unit(f))
+            if only is not None and (mk not in only or name != mk):
+                continue        # shared unit: reference only what this target links
             if name and '.' not in name or (name and re.match(r'^T\w*\.\w+$', name)):
                 refs.append(name)
     # one typed constant and one variable per unit (data blocks are smart-linked per unit)

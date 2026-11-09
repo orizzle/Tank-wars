@@ -45,6 +45,7 @@ procedure U2918_01A1;
 function  U2918_022A: Integer;
 function  U2918_0256: Integer;
 procedure U2918_0286;
+function  U2918_00A5(A, B: Real): Integer;
 function  U2918_02FE(L: LongInt): string;
 function  U2918_0337(S: string): string;
 procedure U2918_03A9;
@@ -186,6 +187,14 @@ begin
     Writeln('Aborting..');
     Halt(1);
   end;
+end;
+
+{ A to the power of B (truncated).  Only BOMBCFG.EXE uses it (smart-linked
+  out of BOMB.EXE), so its marker carries its offset in BOMBCFG.EXE. }
+{#U2918_00A5}
+function U2918_00A5(A, B: Real): Integer;
+begin
+  U2918_00A5 := Trunc(Exp(Ln(A) * B));
 end;
 
 { LongInt -> string }
