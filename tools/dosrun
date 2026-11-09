@@ -1,0 +1,26 @@
+#!/bin/bash
+# usage: dosrun <workdir> "<dos command line>"   (toolchain mounted as T:, workdir as C:)
+W=$(readlink -f "$1"); shift
+TP=$(dirname $(readlink -f "$0"))/../toolchain/tp6
+CONF=$(mktemp --suffix=.conf)
+cat > $CONF <<EOC
+[sdl]
+output=surface
+[dosbox]
+memsize=16
+[cpu]
+cycles=max
+[mixer]
+nosound=true
+[speaker]
+pcspeaker=false
+[autoexec]
+mount c "$W"
+mount t "$TP"
+c:
+$* > DOSRUN.OUT
+exit
+EOC
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 120 dosbox -conf $CONF -exit >/dev/null 2>&1
+rm -f $CONF
+tr -d '\r' < "$W/DOSRUN.OUT"; rm -f "$W/DOSRUN.OUT"

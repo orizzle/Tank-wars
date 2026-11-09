@@ -1,0 +1,5 @@
+VGA256.BGI VGA256Driver
+LITT.CHR LittFont
+EURO.CHR EuroFont
+TINY.CHR TinyFont
+SINTAB.BIN SinTable

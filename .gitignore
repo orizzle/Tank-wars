@@ -1,0 +1,7 @@
+build/
+toolchain/
+orig/
+probe/*.EXE
+probe/*.MAP
+*.lock
+__pycache__/

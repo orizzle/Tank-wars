@@ -1,0 +1,26 @@
+#!/bin/bash
+# usage: tpc <workdir> <tpc args...>   (runs TPC 6.0 in headless dosbox, workdir mounted as C:)
+W=$(readlink -f "$1"); shift
+TP=/vmstore/claude/bomb/decomp/toolchain/tp6
+CONF=$(mktemp --suffix=.conf)
+cat > $CONF <<EOC
+[sdl]
+output=surface
+[dosbox]
+memsize=16
+[cpu]
+cycles=max
+[mixer]
+nosound=true
+[speaker]
+pcspeaker=false
+[autoexec]
+mount c "$W"
+mount t "$TP"
+c:
+t:\\tpc.exe /Tt:\\ /Ut:\\ $* > TPC.OUT
+exit
+EOC
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy timeout 120 dosbox -conf $CONF -exit >/dev/null 2>&1
+rm -f $CONF
+tr -d '\r' < "$W/TPC.OUT"
