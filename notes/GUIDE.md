@@ -116,3 +116,41 @@ into ST, 42FD = store ST to Real); `Single/Double/Extended/Comp` are native.
 `cmp.py UNIT` shows all procs `ok` and `segment: orig X, build X` equal,
 `--layout` and `--data` clean. Then improve readability (comments, names of
 locals/types) without breaking the match (re-run cmp after every change).
+
+## Toolchain note
+`toolchain/tp6/turbo.tpl` is TURBO.TPL from the TP 6.0 disks with ONE change:
+System's typed constant `OvrEmsHandle` initial value $FFFF -> $0000 (file
+offset 0x67F2). The original BOMB.EXE has $0000 there; the System code itself
+is identical. Presumably the original was built with an earlier TP 6.0
+release. The untouched file is kept as `turbo.tpl.pristine`.
+
+## UPDATES (coordinator, read these)
+1. **Unit order / `uses` clauses — do not reorder them.** TP6 links units in the
+   order a depth-first walk over interface AND implementation uses finishes.
+   `tools/fixuses.py` sets the scheme that reproduces the original order:
+   low units (U23C3..U2968) use only lower units; high units (U0040..U2390) have
+   `Graph..U23C3` in the interface and in the implementation section first their
+   right-hand neighbour (U0040->U0098->U0728->U0E9B->U1615->U1B27->U1DD4->U1F69
+   ->U20C6->U22B7->U2390), then other high units they call. If you need another
+   high unit, append it to the implementation `uses` (never first, never in the
+   interface). Check the order with the `Start Stop` table in your BOMB.MAP.
+2. **Nested procedures** exist (called with `push bp` frame link). Marker
+   convention: nested proc -> marker on the SAME line as its header
+   (`{#U0728_3EA1} procedure U0728_3EA1;`); its parent -> marker on the line
+   directly before the parent's `begin`. KEEPALL handles both. Nested procs are
+   not in the interface.
+3. **TP `interrupt` procedures**: entry = the register pushes (U27B1_0008 was
+   renamed U27B1_0000).
+4. Build fallback: on an error in somebody else's unit, build.py now retries
+   with a consistent snapshot of the last successful build (build/lkg_full) for
+   all units except yours (`--mine`). So keep `--mine` accurate.
+5. BASM facts (verified): TP6 BASM encodes reg,reg `mov/add/sub/...` with the
+   89/01/29 (r/m,reg) forms like the compiler; `8B`-form reg-reg moves indicate an
+   external assembler (.OBJ) — for those use a BINOBJ'd blob + `external` only
+   after asking the coordinator. BASM `xchg a,b` encodes a as r/m (reverse of
+   ndisasm order). `call far ptr @label`, `seg @Code`, `offset @label` work.
+6. Some units need `{$A+}` (word-aligned locals; e.g. U2918). Check local offsets.
+7. Use your OWN scratch subdirectory (e.g. scratchpad/<yourname>/) for tests;
+   the scratchpad is shared.
+8. Signatures recently fixed by owners: see the interfaces of U27B1, U27D4,
+   U2823, U2918, U2968 (0067/006F/00B1 now return Integer), U0098, U2390, U0728.

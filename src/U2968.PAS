@@ -5,6 +5,9 @@ unit U2968;
 
 interface
 
+
+
+
 uses
   Graph, Crt, Dos, Printer;
 
@@ -25,11 +28,11 @@ function  U2968_003B: Byte;
 procedure U2968_0047;
 procedure U2968_004D;
 procedure U2968_005A;
-function  U2968_0067: Word;
-function  U2968_006F: Word;
+function  U2968_0067: Integer;
+function  U2968_006F: Integer;
 function  U2968_0077(Buttons: Word): Boolean;
 procedure U2968_009C(HotX, HotY: Integer; var Mask);
-function  U2968_00B1: Word;
+function  U2968_00B1: Integer;
 procedure U2968_00B9(Buf: Pointer);
 procedure U2968_00C8(Buf: Pointer);
 procedure U2968_00D7;
@@ -90,7 +93,7 @@ end;
 
 { mouse x }
 {#U2968_0067}
-function U2968_0067: Word; assembler;
+function U2968_0067: Integer; assembler;
 asm
   mov ax, 3
   int 33h
@@ -99,7 +102,7 @@ end;
 
 { mouse y }
 {#U2968_006F}
-function U2968_006F: Word; assembler;
+function U2968_006F: Integer; assembler;
 asm
   mov ax, 3
   int 33h
@@ -136,7 +139,7 @@ end;
 
 { size of driver state buffer }
 {#U2968_00B1}
-function U2968_00B1: Word; assembler;
+function U2968_00B1: Integer; assembler;
 asm
   mov ax, 15h
   int 33h

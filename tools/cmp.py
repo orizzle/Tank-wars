@@ -161,6 +161,20 @@ def new_side(work):
         if best:
             un = best[1]
             procs[nm] = (un, best[2])
+    # procedures without line numbers (external .OBJ code): use map publics
+    pubs = {}
+    for sg, of, pn in mp['publics']:
+        pubs[pn.upper()] = (sg, of)
+    para2name = {p: n for p, n in table}
+    for nm in markers:
+        if nm not in procs and nm in pubs:
+            sg, of = pubs[nm]
+            if sg in para2name:
+                procs[nm] = (para2name[sg], of)
+    # also externals declared without markers but named like Uxxxx_OOOO
+    for pn, (sg, of) in pubs.items():
+        if re.match(r'^U[0-9A-F]{4}_[0-9A-F]{4}$', pn) and pn not in procs and sg in para2name:
+            procs[pn] = (para2name[sg], of)
     s = Side(m, table, dseg, procs)
     s.map = mp
     return s

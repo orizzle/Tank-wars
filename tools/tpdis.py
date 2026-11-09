@@ -136,6 +136,21 @@ class Disasm:
                         self.drain([lin])
                         changed = True
                     lin += 1
+        # TP 'interrupt' procedures: register pushes precede the bp frame
+        INTPRO = b'\x50\x53\x51\x52\x56\x57\x1e\x06'
+        for p in list(self.procs):
+            if self.img[p - 8:p] == INTPRO and (p - 8) not in self.code:
+                k = self.procs.pop(p)
+                self.procs[p - 8] = k | {'interrupt'}
+                for l2 in range(p - 8, p):
+                    pass
+                # attribute the pushes to the proc
+                self.code[p - 8] = (8, 'push', 'ax,bx,cx,dx,si,di,ds,es', None)
+                self.owner[p - 8] = p - 8
+                self.code_end[p - 8] = self.code_end.pop(p, p)
+                for l2, o in list(self.owner.items()):
+                    if o == p:
+                        self.owner[l2] = p - 8
         return self
 
     def plausible_after(self, lin, ua):

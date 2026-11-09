@@ -5,10 +5,10 @@ usage: build.py [--work DIR] [--mine U0728,U0E9B] [--quiet]
 
 * copies src/ into the work dir (default build/work) and runs
   TPC /B /GD BOMB.PAS there; result: WORK/BOMB.EXE, WORK/BOMB.MAP
-* if compilation fails in a file that is NOT listed in --mine, that file is
-  replaced by its last-known-good copy (build/lkg/) and the build is retried.
-  (Lets several people/agents work on different units at the same time.)
-* after a successful build, the files that were used are stored in build/lkg/.
+* if compilation fails in a file that is NOT listed in --mine, the build is
+  retried with ALL other units taken from build/lkg_full/ (a consistent
+  snapshot of the last successful build by anyone) plus your own files.
+* after a successful build, its sources are stored as the new snapshot.
 Exit status 0 on success; compiler output is printed.
 """
 import sys, os, shutil, subprocess, argparse, re, fcntl, time
@@ -90,13 +90,31 @@ def gen_keepall(work):
         if not f.upper().endswith(('.PAS', '.INC')) or f.upper().startswith('BOMB'):
             continue
         txt = open(os.path.join(work, f), 'rb').read().decode('latin1').split('\n')
+        HDR = re.compile(r'^\s*(?:procedure|function|constructor|destructor)\s+([A-Za-z_][\w.]*)', re.I)
         for i, l in enumerate(txt):
-            if re.search(r'\{#[A-Z0-9]+_[0-9A-F]{4}\}', l):
-                for j in range(i, min(i + 4, len(txt))):
-                    mm = re.match(r'\s*(?:procedure|function|constructor|destructor)\s+([A-Za-z_][\w.]*)', txt[j], re.I)
-                    if mm:
-                        refs.append(mm.group(1))
+            if not re.search(r'\{#[A-Z0-9]+_[0-9A-F]{4}\}', l):
+                continue
+            if HDR.match(re.sub(r'\{#[^}]*\}', '', l)):
+                continue        # marker on the header line = nested procedure (cannot take its address)
+            name = None
+            for j in range(i + 1, min(i + 4, len(txt))):
+                mm = HDR.match(txt[j])
+                if mm:
+                    name = mm.group(1)
+                    break
+                if re.match(r'^\s*begin\b', txt[j], re.I):
+                    break
+            if name is None:
+                # marker placed before the 'begin' of a procedure with nested procedures:
+                # use the closest preceding top-level header (column 0, no marker on it)
+                for j in range(i - 1, -1, -1):
+                    if re.match(r'^(procedure|function|constructor|destructor)\s', txt[j], re.I) and '{#' not in txt[j]:
+                        name = HDR.match(txt[j]).group(1)
                         break
+                    if re.match(r'^\s*(implementation|interface)\s*$', txt[j], re.I):
+                        break
+            if name and '.' not in name or (name and re.match(r'^T\w*\.\w+$', name)):
+                refs.append(name)
     # one typed constant and one variable per unit (data blocks are smart-linked per unit)
     for f in sorted(os.listdir(work)):
         if not f.upper().endswith('.PAS') or f.upper().startswith('BOMB'):
@@ -162,42 +180,53 @@ def main():
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
     if not a.final:
         gen_keepall(work)
-    replaced = set()
-    for attempt in range(12):
-        out = run_tpc(work, '/B /GD /Q %sBOMB.PAS' % ('' if a.final else '/DKEEPALL '))
-        ok = os.path.exists(os.path.join(work, 'BOMB.EXE')) and 'Error' not in out
-        if ok:
-            break
-        m = re.search(r'([A-Z0-9_]+\.(?:PAS|INC))\((\d+)\): (Error.*)', out.upper())
-        if not m or a.no_lkg:
-            break
-        bad = m.group(1)
-        unit = owner_unit(bad)
-        if unit in mine or not mine:
-            break
-        # fall back to LKG versions of every file of that unit
-        lk = [f for f in (os.listdir(LKG) if os.path.isdir(LKG) else []) if owner_unit(f) == unit]
-        if not lk or unit in replaced:
-            break
-        for f in os.listdir(work):
-            if owner_unit(f) == unit and f.upper().endswith(('.PAS', '.INC')):
-                os.remove(os.path.join(work, f))
-        for f in lk:
-            shutil.copy2(os.path.join(LKG, f), os.path.join(work, f))
-        replaced.add(unit)
-        if not a.quiet:
-            print('[build] %s fails to compile (%s); using last-known-good copy' % (unit, m.group(3).strip()))
+    flags = '/B /GD /Q %sBOMB.PAS' % ('' if a.final else '/DKEEPALL ')
+    SNAP = os.path.join(ROOT, 'build', 'lkg_full')
+    used_snapshot = False
+    out = run_tpc(work, flags)
+    ok = os.path.exists(os.path.join(work, 'BOMB.EXE')) and 'Error' not in out
+    if not ok and not a.no_lkg and mine and os.path.isdir(SNAP):
+        m = re.search(r'([A-Z0-9_]+\.(?:PAS|INC))\((\d+)\): (ERROR.*)', out.upper())
+        if m and owner_unit(m.group(1)) not in mine:
+            if not a.quiet:
+                print('[build] %s fails to compile (%s); retrying with the last-known-good snapshot '
+                      'for all units except yours' % (owner_unit(m.group(1)), m.group(3).strip()))
+            # rebuild work: snapshot + my files from src
+            for f in os.listdir(work):
+                p_ = os.path.join(work, f)
+                if os.path.isfile(p_) and f.upper().endswith(('.PAS', '.INC')):
+                    os.remove(p_)
+            for f in os.listdir(SNAP):
+                if owner_unit(f) not in mine:
+                    shutil.copy2(os.path.join(SNAP, f), os.path.join(work, f))
+            for f in os.listdir(SRC):
+                if owner_unit(f) in mine or not f.upper().endswith(('.PAS', '.INC')):
+                    if os.path.isfile(os.path.join(SRC, f)):
+                        shutil.copy2(os.path.join(SRC, f), os.path.join(work, f))
+            if not a.final:
+                gen_keepall(work)
+            out = run_tpc(work, flags)
+            ok = os.path.exists(os.path.join(work, 'BOMB.EXE')) and 'Error' not in out
+            used_snapshot = True
     if not a.quiet or not ok:
         print(out.strip())
-    if replaced:
-        print('[build] units taken from last-known-good:', ', '.join(sorted(replaced)))
+    if used_snapshot:
+        print('[build] NOTE: other units were taken from build/lkg_full (snapshot of the last successful build)')
     if ok and not a.no_lkg:
-        os.makedirs(LKG, exist_ok=True)
-        lockf = open(os.path.join(LKG, '.lock'), 'w')
-        fcntl.flock(lockf, fcntl.LOCK_EX)
+        # save a consistent snapshot of every source file of this successful build
+        tmp = SNAP + '.tmp%d' % os.getpid()
+        os.makedirs(tmp, exist_ok=True)
         for f in os.listdir(work):
-            if f.upper().endswith(('.PAS', '.INC', '.OBJ')) and owner_unit(f) not in replaced:
-                shutil.copy2(os.path.join(work, f), os.path.join(LKG, f))
+            if f.upper().endswith(('.PAS', '.INC')) and f.upper() != 'KEEPALL.INC':
+                shutil.copy2(os.path.join(work, f), os.path.join(tmp, f))
+        lockf = open(os.path.join(ROOT, 'build', '.lkg.lock'), 'w')
+        fcntl.flock(lockf, fcntl.LOCK_EX)
+        old = SNAP + '.old%d' % os.getpid()
+        if os.path.isdir(SNAP):
+            os.rename(SNAP, old)
+        os.rename(tmp, SNAP)
+        if os.path.isdir(old):
+            shutil.rmtree(old, ignore_errors=True)
         fcntl.flock(lockf, fcntl.LOCK_UN)
     sys.exit(0 if ok else 1)
 
