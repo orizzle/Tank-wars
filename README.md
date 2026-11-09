@@ -8,6 +8,7 @@ Built with Turbo Pascal 6.0, it reproduces both original executables
 |---|---|---|
 | `BOMB.EXE` (the game) | 241 312 | `cb93e5218e4d06e4c162f829c18ae329` |
 | `BOMBCFG.EXE` (Turbo Vision setup program) | 94 544 | `b9234efac0a58329accaa9914fec72a4` |
+
 The author released the game as freeware and explicitly allows decompiling it.
 
 ## Building
