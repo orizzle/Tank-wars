@@ -84,7 +84,7 @@ type
   PTwanger = ^TTwanger;
   TTwanger = object(TComputer)  { 'Twanger' }
     Score: array[0..10] of Integer;   { +14 }
-    f2A: array[0..10] of Integer;     { +2A }
+    Rank: array[0..10] of Integer;    { +2A }
     constructor Init(APlayer: Integer);
     function Think: Integer; virtual;
   end;
@@ -534,6 +534,7 @@ var
   V: Real;
   H: Real;
   Ok: Boolean;
+  u28: Byte;
 begin
   if not Ready then
   begin
@@ -595,9 +596,97 @@ begin
   Kind := 7;
 end;
 
+{ random enemy; solves the ballistic equations including the wind }
 {#U23C3_1AC2}
 function TWindMaster.Think: Integer;
+var
+  dX, dY: Integer;
+  u8: Integer;
+  i, j: Integer;
+  Tries: Integer;
+  G: Real;          { gravity }
+  W: Real;          { wind acceleration }
+  X, Y: Real;
+  S, C: Real;       { sin / cos of the angle }
+  T: Real;
+  V: Real;
+  Ok: Boolean;
+  u40: Byte;
 begin
+  if not Ready then
+  begin
+    U2823_0006;
+    Tries := 0;
+    Ok := True;
+    TScreen(SaveBuf_E496^) := Screen;
+    repeat
+      Target := Random(g_46B4) + 1;
+    until (Players_3F0E[Target].f23 <> 0) and (Target <> Player) and
+          (Players_3F0E[Target].Team <> Players_3F0E[Player].Team);
+    SetColor(Player + 19);
+    for i := 1 to 10 do
+      for j := -15 to 15 do
+      begin
+        U2823_017D(Players_3F0E[Target].X, Players_3F0E[Target].Y, 15, Abs(j), Player + 19);
+        U2823_017D(Players_3F0E[Target].X, Players_3F0E[Target].Y, Abs(j), 15, Player + 19);
+        U2823_0687(Players_3F0E[Target].X, Players_3F0E[Target].Y, 15, Abs(j), SaveBuf_E496);
+        U2823_0687(Players_3F0E[Target].X, Players_3F0E[Target].Y, Abs(j), 15, SaveBuf_E496);
+      end;
+    dX := Players_3F0E[Target].X;
+    dY := Players_3F0E[Target].Y;
+    repeat
+      V := 1000;
+      Ok := True;
+      Inc(Tries);
+      dX := Players_3F0E[Target].X - Players_3F0E[Player].X;
+      dY := Players_3F0E[Target].Y - Players_3F0E[Player].Y;
+      Angle := Random(180);
+      dX := Trunc(dX - U26D4_005A(Angle) * 8);
+      dY := Trunc(dY + U26D4_0000(Angle) * 8) - 1;
+      G := -0.05;
+      X := dX;
+      Y := -dY;
+      S := U26D4_0000(Angle);
+      C := U26D4_005A(Angle);
+      W := g_E778 * 0.5 / 5000;
+      if S = 0 then
+        Ok := False;
+      if C = 0 then
+        Ok := False;
+      if W * S - G * C = 0 then
+        Ok := False;
+      if Ok then
+      begin
+        T := (X * S - Y * C) / (W * S - G * C);
+        if T <= 0 then
+          Ok := False;
+        if Ok then
+          V := (X - W * T) / (Sqrt(T) * C);
+      end;
+      V := V * 50;
+      if V > 32767 then
+        V := 32767;
+      if V < -32767 then
+        V := -32767;
+      Power := Trunc(V);
+      Dir := 1;
+      if Angle > 90 then
+      begin
+        Angle := 180 - Angle;
+        Dir := -1;
+      end;
+      if Power < 0 then
+        Ok := False;
+      if 10 * Players_3F0E[Player].Men < Power then
+        Ok := False;
+    until Ok or (Tries > 40);
+    Weapon := 11;
+    for j := 1 to 4 do
+      if Players_3F0E[Player].Ammo[j] > 0 then
+        Weapon := j;
+    Ready := True;
+  end;
+  Think := Steer;
 end;
 
 {#U23C3_2126}
@@ -608,9 +697,186 @@ begin
   Kind := 6;
 end;
 
+{ like a Rifleman, but bounces its shot off the ceiling: aims at the
+  mirror image of the target 28 pixels below the top and checks the two
+  legs of the path for dirt }
 {#U23C3_2181}
 function TTwanger.Think: Integer;
+var
+  i, k, w: Integer;
+  dX, dY: Integer;
+  mx, my: Integer;
+  H: Integer;
+  Best: Integer;
+  Range: Integer;
+  Level: Integer;
+  uR: Real;
+  A: Real;
+  px, py: Integer;
+  Col: Integer;
+  R: Real;
+  P: PComputer;
 begin
+  if not Ready then
+    if g_46C6 in [1, 2, 3] then
+    begin
+      TScreen(SaveBuf_E496^) := Screen;
+      SetColor(Player + 19);
+      Weapon := 1;
+      for i := 1 to g_46B4 do
+      begin
+        Score[i] := 1000;
+        if Player = i then
+          Score[i] := -1;
+        if Players_3F0E[i].f23 = 0 then
+          Score[i] := -1;
+        if Players_3F0E[i].Team = Players_3F0E[Player].Team then
+          Score[i] := -1;
+        if Score[i] <> -1 then
+        begin
+          dX := Players_3F0E[i].X - Players_3F0E[Player].X;
+          dY := Players_3F0E[Player].Y - Players_3F0E[i].Y;
+          H := Players_3F0E[i].Y - 28;
+          A := ArcTan(Abs((dY + H + H) / dX));
+          if dX < 0 then
+            Dir := -1
+          else
+            Dir := 1;
+          g_4626 := Players_3F0E[Player].Y - 28;
+          g_4624 := Trunc(Dir * g_4626 / (Sin(A) / Cos(A)));
+          R := U2918_008F(g_4624, g_4626);
+          Col := i + 19;
+          for k := 1 to Trunc(R) do
+          begin
+            px := Trunc(Players_3F0E[Player].X + g_4624 / R * k);
+            py := Trunc(Players_3F0E[Player].Y - g_4626 / R * k);
+            if U2823_0BFF(px, py) = 2 then
+              Score[i] := Score[i] - 3;
+            U2823_0BB6(px, py, Col);
+          end;
+          mx := Players_3F0E[Player].X + g_4624;
+          my := Players_3F0E[Player].Y - g_4626;
+          g_4626 := Players_3F0E[i].Y - my;
+          g_4624 := Players_3F0E[i].X - mx;
+          R := U2918_008F(g_4624, g_4626);
+          for k := 1 to Trunc(R) do
+          begin
+            px := Trunc(mx + g_4624 / R * k);
+            py := Trunc(my + g_4626 / R * k);
+            if U2823_0BFF(px, py) = 2 then
+              Dec(Score[i]);
+            U2823_0BB6(px, py, Col);
+          end;
+        end;
+      end;
+      { rank the scores; keep only the best rank }
+      Best := 0;
+      Level := 1;
+      Target := 0;
+      FillChar(Rank, SizeOf(Rank), 0);
+      for i := 1 to g_46B4 do
+        if Score[i] > Best then
+        begin
+          Inc(Level);
+          Best := Score[i];
+          Rank[i] := Level;
+        end
+        else if Score[i] = Best then
+          Rank[i] := Level;
+      Best := 0;
+      for i := 1 to g_46B4 do
+        if Rank[i] >= Best then
+          Best := Rank[i];
+      for i := 1 to g_46B4 do
+        if Rank[i] < Best then
+          Rank[i] := 0;
+      Target := 0;
+      FillChar(Score, SizeOf(Score), 0);
+      for i := 1 to g_46B4 do
+        if Rank[i] <> 0 then
+          Score[i] := 1000 - Trunc(U2918_008F(Players_3F0E[Player].X - Players_3F0E[i].X,
+                                              Players_3F0E[Player].Y - Players_3F0E[i].Y));
+      Best := 0;
+      for i := 1 to g_46B4 do
+        if Score[i] > Best then
+        begin
+          Best := Score[i];
+          Target := i;
+        end;
+      { trace the path to the chosen target once more }
+      i := Target;
+      Screen := TScreen(SaveBuf_E496^);
+      Score[i] := 1000;
+      dX := Players_3F0E[i].X - Players_3F0E[Player].X;
+      dY := Players_3F0E[Player].Y - Players_3F0E[i].Y;
+      H := Players_3F0E[i].Y - 28;
+      A := ArcTan(Abs((dY + H + H) / dX));
+      if i < Player then
+        Dir := -1
+      else
+        Dir := 1;
+      g_4626 := Players_3F0E[Player].Y - 28;
+      g_4624 := Trunc(Dir * g_4626 / (Sin(A) / Cos(A)));
+      R := U2918_008F(g_4624, g_4626);
+      Col := i + 19;
+      for k := 1 to Trunc(R) do
+      begin
+        px := Trunc(Players_3F0E[Player].X + g_4624 / R * k);
+        py := Trunc(Players_3F0E[Player].Y - g_4626 / R * k);
+        if U2823_0BFF(px, py) = 2 then
+          Score[i] := Score[i] - 3;
+        U2823_0BB6(px, py, Col);
+      end;
+      mx := Players_3F0E[Player].X + g_4624;
+      my := Players_3F0E[Player].Y - g_4626;
+      g_4626 := Players_3F0E[i].Y - my;
+      g_4624 := Players_3F0E[i].X - mx;
+      R := U2918_008F(g_4624, g_4626);
+      for k := 1 to Trunc(R) do
+      begin
+        px := Trunc(mx + g_4624 / R * k);
+        py := Trunc(my + g_4626 / R * k);
+        if U2823_0BFF(px, py) = 2 then
+          Dec(Score[i]);
+        U2823_0BB6(px, py, Col);
+      end;
+      dX := Players_3F0E[Target].X - Players_3F0E[Player].X;
+      dY := Players_3F0E[Player].Y - Players_3F0E[Target].Y;
+      H := Players_3F0E[Target].Y - 28;
+      Power := Random(51) + 950;
+      Angle := Trunc(U2918_011B(ArcTan(Abs((dY + H + H) / dX))));
+      if dX < 0 then
+        Dir := -1
+      else
+        Dir := 1;
+      if Angle < 0 then
+        Angle := Abs(Angle);
+      Screen := TScreen(SaveBuf_E496^);
+      Weapon := 1;
+      if Score[Target] > 990 then
+        for w := 2 to 4 do
+        begin
+          case w of
+            2: Range := 15;
+            3: Range := 30;
+            4: Range := 60;
+          end;
+          if (Players_3F0E[Player].Ammo[w] > 0) and (U2918_008F(dX, dY) > Range) then
+            Weapon := w;
+        end;
+      if (Score[Target] <= 990) and (Players_3F0E[Player].Ammo[5] > 100) then
+        Weapon := 5;
+      Ready := True;
+    end
+    else
+    begin
+      P := New(PRifleman, Init(Player));
+      P^ := PComputer(Tanks_3EE2[Player])^;
+      P^.Think;
+      PComputer(Tanks_3EE2[Player])^ := P^;
+      Dispose(P, Done);
+    end;
+  Think := Steer;
 end;
 
 { free all computer players }

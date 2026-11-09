@@ -32,7 +32,7 @@
  "GRAPH:1119": "GetFillSettings(fs)#0",
  "GRAPH:1131": "SetFillStyle(1,2)#0",
  "GRAPH:11EA": "Circle(1,2,3)#0",
- "GRAPH:1241": "i:=GetBkColor#0",
+ "GRAPH:1241": "GetColor (identical code to GetBkColor except the variable)",
  "GRAPH:131D": "PutImage(1,2,buf,3)#0",
  "GRAPH:13D8": "GetTextSettings(ts)#0",
  "GRAPH:13F2": "OutText(s)#0",

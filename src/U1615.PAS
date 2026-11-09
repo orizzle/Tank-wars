@@ -1,8 +1,11 @@
 {$A-,B-,D+,F+,G-,I-,L+,N+,E+,O-,R-,S-,V+,X+}
 unit U1615;
 
-{ Projectile flight: shot animation, guidance (MIRV / Horizontal / Vertical),
-  impact handling. }
+{ Shot flight: normal shells (0209), MIRV with spread / detonation menus
+  (14AE), laser beam (3550), the per-turn round loop (46C2) and the weapon
+  indicator colours (0000).
+  Player fields as used here: f1B = power, f1D = angle, f1F = direction (+1/-1),
+  f26 = active guidance bits, f28 = guidance target, Guidance[2] = magnet. }
 
 interface
 
@@ -17,10 +20,16 @@ uses
 type
   TSetRGBProc = procedure(Color, R, G, B: Integer);
   TVGAImage = array[0..63999] of Byte;
+  { one logged shot (read back by the computer players in U23C3) }
+  TShot = record
+    Angle, Power, Dir: Integer;       { +0 +2 +4 }
+    HitX, HitY: Integer;              { +6 +8  impact point }
+  end;
 
 var
   SetRGB: TSetRGBProc absolute g_E7C8;
   VGA: TVGAImage absolute $A000:0;
+  ShotLog: array[0..10, 0..200] of TShot absolute g_495A;
 
 procedure U1615_0000(P: Integer);
 procedure U1615_0209(P: Integer);
@@ -914,14 +923,403 @@ Restart:
   g_E79A := SavedDelay;
 end;
 
+{ laser beam of player P: charges the beam colour, then traces a straight
+  beam that cuts through dirt and tanks until its energy (power) is used up }
 {#U1615_3550}
 procedure U1615_3550(P: Integer);
+var
+  R, G, B: Integer;                   { bp-2, bp-4, bp-6 }
+  Ang: Integer;                       { bp-8 }
+  Energy: Integer;                    { bp-0A }
+  StepR, StepB, StepG: Real;          { bp-10, bp-16, bp-1C }
+  Color: Integer;                     { bp-1E }
+  Pix: Integer;                       { bp-20 }
+  Hit: array[1..10] of Boolean;       { bp-2A }
 begin
+  FillChar(Hit, 10, 0);
+  Hit[P] := True;
+  if Players_3F0E[P].f1B <> 0 then
+  begin
+    if Players_3F0E[P].f1B > Players_3F0E[P].Ammo[5] then
+      Players_3F0E[P].f1B := Players_3F0E[P].Ammo[5];
+    Players_3F0E[P].Ammo[5] := Players_3F0E[P].Ammo[5] - Players_3F0E[P].f1B;
+    U26A9_014E(Players_3F0E[P]);
+    U26A9_0220(R, G, B, Players_3F0E[P]);
+    Color := P + 19;
+    SetRGB(254, R, G, B);
+    U2823_09E4(Players_3F0E[P].X, Players_3F0E[P].Y,
+      Players_3F0E[P].X + Trunc(Cos(U2918_00D9(Players_3F0E[P].f1D)) * 8.0) * Players_3F0E[P].f1F,
+      Players_3F0E[P].Y - Trunc(Sin(U2918_00D9(Players_3F0E[P].f1D)) * 8.0), 254);
+    U0098_05D2(Players_3F0E[P].X, Players_3F0E[P].Y, Color);
+    StepR := (63 - R) / 100.0;
+    StepG := (63 - G) / 100.0;
+    StepB := -B / 100.0;
+    for g_461E := 1 to 100 do
+    begin
+      Pal_E49E[g_461E].R := Trunc(R + StepR * g_461E);
+      Pal_E49E[g_461E].G := Trunc(G + StepG * g_461E);
+      Pal_E49E[g_461E].B := Trunc(B + StepB * g_461E);
+      if g_E788 <> 0 then
+        Sound(50 * g_461E);
+    end;
+    for g_4620 := 1 to 2 do
+    begin
+      for g_461E := 1 to 100 do
+      begin
+        SetRGB(254, Pal_E49E[g_461E].R, Pal_E49E[g_461E].G, Pal_E49E[g_461E].B);
+        Delay(g_E79A div g_4620);
+        if g_E788 <> 0 then
+          Sound(50 * g_461E);
+      end;
+      for g_461E := 100 downto 1 do
+      begin
+        SetRGB(254, Pal_E49E[g_461E].R, Pal_E49E[g_461E].G, Pal_E49E[g_461E].B);
+        Delay(g_E79A div g_4620);
+        if g_E788 <> 0 then
+          Sound(50 * g_461E);
+      end;
+    end;
+    for g_461E := 1 to 100 do
+    begin
+      SetRGB(254, Pal_E49E[g_461E].R, Pal_E49E[g_461E].G, Pal_E49E[g_461E].B);
+      if g_E788 <> 0 then
+        Sound(50 * g_461E);
+      Delay(g_E79A div g_4620);
+    end;
+    if g_E788 <> 0 then
+    begin
+      Sound(111); Delay(6);
+      Sound(222); Delay(6);
+      Sound(333); Delay(9);
+      Sound(444); Delay(9);
+      Sound(555); Delay(9);
+      Sound(666); Delay(9);
+      Sound(777); Delay(9);
+      Sound(888); Delay(9);
+      Sound(999); Delay(9);
+      Sound(1111); Delay(20);
+      Sound(1333); Delay(33);
+      Sound(1777); Delay(33);
+      Sound(2111); Delay(40);
+      NoSound;
+    end;
+    Energy := 10 * Players_3F0E[P].f1B;
+    if Players_3F0E[P].f1F > 0 then
+      Ang := Players_3F0E[P].f1D
+    else
+      Ang := 90 - Players_3F0E[P].f1D + 90;
+    g_46B8 := 0;
+    if Random < 0.2 then
+      U26A9_0004(1, 0, Players_3F0E[P]);
+    g_4670 := Players_3F0E[P].X + Players_3F0E[P].f1F *
+      (Cos(U2918_00D9(Players_3F0E[P].f1D)) * 7.0);
+    g_4676 := Players_3F0E[P].Y - Sin(U2918_00D9(Players_3F0E[P].f1D)) * 7.0;
+    g_467C := Cos(U2918_00D9(Ang));
+    g_4682 := -Sin(U2918_00D9(Ang));
+    g_462F := 0;
+    for g_461E := 1 to g_46B4 do
+      SetRGB(100 - g_461E, 32 div Players_3F0E[g_461E].f60,
+        32 div Players_3F0E[g_461E].f62, 32 div Players_3F0E[g_461E].f64);
+    g_462E := 1;
+    g_46A0 := 53.0 / (10 * Players_3F0E[P].f1B);
+    repeat
+      g_4670 := g_4670 + g_467C;
+      g_4676 := g_4676 + g_4682;
+      Dec(Energy, 10);
+      R := Trunc(Energy * g_46A0 + 10.0);
+      SetRGB(254, R, R, 0);
+      Pix := U2823_0BFF(Trunc(g_4670), Trunc(g_4676));
+      if Pix = 2 then
+        for g_4620 := 1 to 15 do
+        begin
+          g_4624 := Trunc(g_4670 - g_467C * Random(20));
+          g_4626 := Trunc(g_4676 - g_4682 * Random(20));
+          if g_E788 <> 0 then
+            Sound(Random(500 * g_4620) + 500);
+          g_4658 := GetPixel(g_4624, g_4626);
+          if (g_4624 >= 11) and (g_4624 <= 309) and (g_4626 >= 31) and (g_4626 <= 189) and
+             (g_4658 <> 254) and not ((g_4658 >= 20) and (g_4658 <= 29)) then
+            U2823_0BD8(g_4624, g_4626, BackBuf_E49A);
+        end;
+      if (Pix > 19) and (Pix < 30) and (Players_3F0E[Pix - 19].Men > 0) then
+      begin
+        if not Hit[Pix - 19] then
+          Inc(Players_3F0E[P].f6C);
+        Hit[Pix - 19] := True;
+        Energy := Energy - 10;
+        if Players_3F0E[Pix - 19].Guidance[0] <= 0 then
+        begin
+          for g_4620 := 1 to 15 do
+          begin
+            repeat
+              Paths_9FC8[1, g_4620].X := Trunc(g_4670 - Random(40) + 20.0);
+              Paths_9FC8[1, g_4620].Y := Trunc(g_4676 - Random(40) + 20.0);
+              g_4658 := GetPixel(Paths_9FC8[1, g_4620].X, Paths_9FC8[1, g_4620].Y);
+            until (g_4658 < 20) or ((g_4658 > 29) and (g_4658 <> 254)) or (Pix = g_4658);
+            if g_E788 <> 0 then
+              Sound(Random(500 * g_4620) + 500);
+            Delay(g_E79E div 5);
+            B := Paths_9FC8[1, g_4620].X;
+            g_4660 := Paths_9FC8[1, g_4620].Y;
+            if (B >= 11) and (B <= 309) and (g_4660 >= 31) and (g_4660 <= 189) then
+              U2823_0BB6(B, g_4660, Pix);
+          end;
+          for g_4620 := 1 to 15 do
+          begin
+            if g_E788 <> 0 then
+              Sound(Random(500 * g_4620) + 500);
+            B := Paths_9FC8[1, g_4620].X;
+            g_4660 := Paths_9FC8[1, g_4620].Y;
+            if (B >= 11) and (B <= 309) and (g_4660 >= 31) and (g_4660 <= 189) then
+              U2823_0BD8(B, g_4660, BackBuf_E49A);
+          end;
+        end;
+        g_4658 := Pix - 19;
+        U26A9_0004(3, 0, Players_3F0E[g_4658]);
+        g_4670 := g_4670 - g_467C;
+        g_4676 := g_4676 - g_4682;
+      end;
+      Delay(g_E79E div 2);
+      if g_E788 <> 0 then
+        Sound(Trunc(Random(12 * Energy) + 100));
+      if Energy <= 0 then
+        g_462F := 1;
+      if g_46EE <> 0 then
+      begin
+        if (g_4670 <= 11) and (g_467C < 0) then
+          g_467C := -g_467C;
+        if (g_4670 >= 309) and (g_467C > 0) then
+          g_467C := -g_467C;
+        if (g_4676 <= 31) and (g_4682 < 0) then
+          g_4682 := -g_4682;
+        if (g_4676 >= 189) and (g_4682 > 0) then
+          g_4682 := -g_4682;
+      end
+      else
+      begin
+        if g_46EF <> 0 then
+        begin
+          if g_4670 <= 10 then
+            g_4670 := g_4670 + 300.0;
+          if g_4670 >= 310 then
+            g_4670 := g_4670 - 300.0;
+        end
+        else
+        begin
+          if (g_4670 <= 11) and (g_467C < 0) then
+            g_462F := 1;
+          if (g_4670 >= 309) and (g_467C > 0) then
+            g_462F := 1;
+        end;
+        if (g_4676 <= 31) and (g_4682 < 0) then
+          g_462F := 1;
+        if (g_4676 >= 189) and (g_4682 > 0) then
+          g_462F := 1;
+      end;
+      if g_462F = 0 then
+        U2823_0BB6(Trunc(g_4670), Trunc(g_4676), 254);
+      if Energy <= 0 then
+        g_462F := 1;
+    until g_462F = 1;
+    SetRGB(254, 0, 0, 0);
+    U0098_0579(254, 254, BackBuf_E49A);
+    NoSound;
+  end;
 end;
 
+{ play one round: choose the wind, pick the starting player, then let the
+  living players fire in turn until only one team is left }
 {#U1615_46C2}
 procedure U1615_46C2;
+var
+  Cur: Integer;                       { bp-2 }
+  Unused: array[0..5] of Byte;        { bp-8 }
 begin
+  U0098_0006;
+  U27B1_010C;
+  SetTextStyle(0, 0, 1);
+  U20C6_099E;
+  g_46BE := g_E77E;
+  if g_E77E = 5 then
+    g_46BE := Random(5);
+  repeat
+    case g_46BE of
+      0: g_4620 := 0;
+      1: g_4620 := 20;
+      2: g_4620 := 100;
+      3: g_4620 := 300;
+      4: g_4620 := 4000;
+    end;
+    g_461E := Random(g_4620);
+    g_E778 := g_4620 div 2 - g_461E;
+  until Abs(g_E778) >= g_4620 div 10;
+  if Random < 0.1 then
+    g_E778 := g_E778 * 4;
+  if Random < 0.1 then
+    g_E778 := g_E778 * 4;
+  if Random < 0.05 then
+    g_E778 := g_E778 * 4;
+  if Random < 0.05 then
+    g_E778 := g_E778 * 4;
+  if g_E778 > 30000 then
+    g_E778 := 30000;
+  if g_E778 < -30000 then
+    g_E778 := -30000;
+  SetColor(5);
+  SetTextJustify(0, 2);
+  OutTextXY(8, 0, 'Angle:');
+  OutTextXY(8, 10, 'Power:');
+  OutTextXY(216, 0, 'Direction( )');
+  OutTextXY(216, 10, 'Men:');
+  SetTextJustify(1, 2);
+  SetColor(9);
+  if g_E778 >= 0 then
+    g_461E := 1
+  else
+    g_461E := -1;
+  OutTextXY(160, 10, 'Wind: ' + U2918_02FE(Abs(g_E778)) + ' ' + DirChar_0064[g_461E]);
+  U20C6_1268;
+  repeat
+    g_462F := 1;
+    Cur := Random(g_46B4);
+    for g_461E := 1 to g_46B4 do
+      if Players_3F0E[g_461E].f72 < Players_3F0E[Cur + 1].f72 then
+        g_462F := 0;
+  until g_462F <> 0;
+  Inc(Players_3F0E[Cur + 1].f72);
+  g_46C4 := 1;
+  repeat
+    repeat
+      Inc(Cur);
+      if Cur > g_46B4 then
+      begin
+        Cur := 1;
+        Inc(g_46C4);
+      end;
+    until Players_3F0E[Cur].f23 <> 0;
+    g_46C8 := Cur;
+    U0098_07A3(Cur);
+    Inc(Players_3F0E[Cur].f5E);
+    Inc(Players_3F0E[Cur].f70);
+    if Players_3F0E[Cur].Ammo[Players_3F0E[Cur].Weapon] = 0 then
+      repeat
+        Inc(Players_3F0E[Cur].Weapon);
+        if Players_3F0E[Cur].Weapon > 17 then
+          Players_3F0E[Cur].Weapon := 0;
+      until Players_3F0E[Cur].Ammo[Players_3F0E[Cur].Weapon] > 0;
+    U1615_0000(Cur);
+    SetFillStyle(1, 0);
+    Bar(109, 0, 211, 7);
+    SetColor(Cur + 19);
+    SetTextJustify(1, 2);
+    OutTextXY(160, 0, Players_3F0E[Cur].Name);
+    SetTextJustify(1, 2);
+    SetColor(9);
+    if g_E778 >= 0 then
+      g_461E := 1
+    else
+      g_461E := -1;
+    OutTextXY(160, 10, 'Wind: ' + U2918_02FE(Abs(g_E778)) + ' ' + DirChar_0064[g_461E]);
+    SetTextJustify(0, 2);
+    SetColor(14);
+    if Players_3F0E[Cur].f1B > 10 * Players_3F0E[Cur].Men then
+      Players_3F0E[Cur].f1B := 10 * Players_3F0E[Cur].Men;
+    g_462F := 0;
+    U1F69_040D(Cur);
+    g_46C8 := Cur;
+    if Players_3F0E[Cur].Weapon in [0..4, 6, 8..17] then
+      U1615_0209(Cur);
+    if Players_3F0E[Cur].Weapon in [5] then
+      U1615_3550(Cur);
+    if Players_3F0E[Cur].Weapon in [7] then
+      U1615_14AE(Cur);
+    for g_461E := 1 to g_46B4 do
+      U0098_07A3(g_461E);
+    if g_E77A > 0 then
+      U1F69_03C7;
+    if g_E78D <> 0 then
+      U1F69_0024;
+    with Players_3F0E[Cur] do
+    begin
+      if g_4670 > 32767.0 then
+        ShotLog[Cur, f5E].HitX := 32767
+      else
+        ShotLog[Cur, f5E].HitX := Trunc(g_4670);
+      ShotLog[Cur, f5E].HitY := Trunc(g_4676);
+      ShotLog[Cur, f5E].Dir := Players_3F0E[Cur].f1F;
+      ShotLog[Cur, f5E].Power := Players_3F0E[Cur].f1B;
+      ShotLog[Cur, f5E].Angle := Players_3F0E[Cur].f1D;
+      ShotLog[Cur, f5E].HitY := Trunc(g_4676);
+    end;
+    U1615_0000(Cur);
+    NoSound;
+    repeat
+      g_46E9 := 0;
+      for g_461E := 1 to g_46B4 do
+        if (Players_3F0E[g_461E].Men <= 0) and (Players_3F0E[g_461E].f23 <> 0) then
+        begin
+          g_46E9 := 1;
+          Players_3F0E[g_461E].f23 := 0;
+          U0098_07A3(g_461E);
+          SetFillStyle(1, 0);
+          Bar(109, 0, 211, 7);
+          SetColor(g_461E + 19);
+          SetTextJustify(1, 2);
+          OutTextXY(160, 0, Players_3F0E[g_461E].Name);
+          g_4620 := Random(7);
+          case g_4620 of
+            0: U1B27_0047(g_461E);
+            1: U1B27_0DAB(g_461E, 0);
+            2: U1B27_1B69(g_461E);
+            3: U1B27_0DAB(g_461E, 1);
+            4: U1B27_25D9(g_461E);
+            5: U1B27_2840(g_461E);
+            6: U1B27_2902(g_461E);
+          end;
+          if Players_3F0E[g_46C8].Team <> Players_3F0E[g_461E].Team then
+          begin
+            Players_3F0E[g_46C8].Score := Players_3F0E[g_46C8].Score + 1500;
+            Players_3F0E[g_46C8].f6E := Players_3F0E[g_46C8].f6E + 1;
+          end
+          else
+            Players_3F0E[g_46C8].Score := Players_3F0E[g_46C8].Score - 1000;
+          U1F69_0366;
+          U1F69_03C7;
+          if g_E78D <> 0 then
+            U1F69_0024;
+          SetTextJustify(0, 2);
+        end;
+      NoSound;
+      if (g_46E9 = 0) and (g_46C4 > 10) and (g_46C4 > Random(100)) then
+      begin
+        U1DD4_1562(0);
+        g_46E9 := 1;
+      end;
+    until g_46E9 = 0;
+    g_4622 := 0;
+    g_46ED := 1;
+    for g_461E := 1 to g_46B4 do
+      if Players_3F0E[g_461E].f23 <> 0 then
+        g_4622 := Players_3F0E[g_461E].Team;
+    for g_461E := 1 to g_46B4 do
+      if (Players_3F0E[g_461E].f23 <> 0) and (g_4622 <> Players_3F0E[g_461E].Team) then
+        g_46ED := 0;
+    g_46BA := 0;
+    if g_46ED <> 0 then
+    begin
+      g_46BA := g_4622;
+      g_46ED := 1;
+    end;
+  until g_46ED <> 0;
+  U0098_0000;
+  for g_461E := 1 to g_46B4 do
+  begin
+    g_4620 := 100 - Players_3F0E[g_461E].Men;
+    if (Players_3F0E[g_461E].Men > 100) or (Players_3F0E[g_461E].Men < 0) then
+      g_4620 := 100;
+    Players_3F0E[g_461E].f68 := Players_3F0E[g_461E].f68 + g_4620;
+  end;
+  U27B1_014E;
 end;
 
 end.

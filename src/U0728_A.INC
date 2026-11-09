@@ -1,10 +1,4 @@
 
-type
-  T7DA = array[0..$7D9] of Byte;
-
-var
-  Rec_495A: array[0..10] of T7DA absolute g_495A;
-
 { 'YES' / 'NO' }
 {#U0728_0007}
 function U0728_0007(B: Boolean): string;
@@ -257,6 +251,7 @@ begin
   FreeMem(Buf, $2EC);
 end;
 
+{ background type name }
 {#U0728_0DEF}
 function U0728_0DEF(N: Integer): string;
 begin
@@ -303,6 +298,7 @@ begin
   end;
 end;
 
+{ "Game Options" box: 10 settings, changed with cursor keys / space / mouse }
 {#U0728_1186}
 procedure U0728_1186;
 var
@@ -524,6 +520,8 @@ begin
   FreeMem(Buf, $F64);
 end;
 
+{ main menu: Sound Options / Game Options / Players / Games / START,
+  plus the "Load Game" button (sets g_46F1) }
 {#U0728_1DD5}
 procedure U0728_1DD5;
 var
@@ -669,11 +667,15 @@ begin
   until Done or (g_46F1 <> 0);
 end;
 
+{ "Team Setup" screen: assign each player to a team (1..number of players);
+  cancels team play (g_E791 := 0) unless at least one team has 2+ members }
 {#U0728_2609}
 procedure U0728_2609;
 var
   Sel, Old: Integer;
   Down, Up: Boolean;
+  KbdHead: Word absolute $40:$1A;
+  KbdTail: Word absolute $40:$1C;
 begin
   SetTextStyle(2, 0, 1);
   SetUserCharSize(1, 1, 1, 1);
@@ -800,30 +802,204 @@ begin
     SetColor(4);
     OutTextXY($A0, $81, 'PRESS ANY KEY TO CONTINUE...');
     repeat until KeyPressed or U2968_0077(1) or U2968_0077(2);
-    MemW[$40:$1A] := MemW[$40:$1C];   { flush BIOS keyboard buffer }
+    KbdHead := KbdTail;   { flush BIOS keyboard buffer }
     g_E791 := 0;
     for g_461E := 1 to 10 do Players_3F0E[g_461E].Team := g_461E;
   end;
   if g_462F <> 0 then ;
 end;
 
-{#U0728_2D41}
-procedure U0728_2D41(a1: Word);
-begin
-end;
+{ edit the name of team T in a small dialog box }
+procedure U0728_302C(T: Integer);
+var
+  Pos, NewPos, J, Unused1, Unused2: Integer;
+  Done, Changed: Boolean;
 
-{#U0728_2E8E}
-procedure U0728_2E8E(a1: Word);
-begin
-end;
+  { draw the block cursor under character Pos }
+  {#U0728_2D41} procedure U0728_2D41;
+  begin
+    U2823_0031((Pos - 1) * 6 + $8F - 1, $64, (Pos - 1) * 6 + $8F + 4, $6E, $12);
+    U2823_0031((Pos - 1) * 6 + $8F, $65, (Pos - 1) * 6 + $8F + 3, $6D, $12);
+    U2823_0031((Pos - 1) * 6 + $8F + 1, $66, (Pos - 1) * 6 + $8F + 2, $6C, $12);
+    SetColor(0);
+    OutTextXY((Pos - 1) * 6 + $8F, $68, Copy(Teams_4712[T].Name, Pos, 1));
+    U2823_00CC((Pos - 1) * 6 + $8F - 1, $6D, (Pos - 1) * 6 + $8F + 4, $6E, SaveBuf_E496);
+  end;
+
+  { remove the cursor again }
+  {#U0728_2E8E} procedure U0728_2E8E;
+  begin
+    U2823_0031((Pos - 1) * 6 + $8F - 1, $64, (Pos - 1) * 6 + $8F + 4, $6E, $12);
+    U2823_0031((Pos - 1) * 6 + $8F, $65, (Pos - 1) * 6 + $8F + 3, $6D, $12);
+    U2823_0031((Pos - 1) * 6 + $8F + 1, $66, (Pos - 1) * 6 + $8F + 2, $6C, $12);
+    SetColor(0);
+    OutTextXY((Pos - 1) * 6 + $8F, $68, Copy(Teams_4712[T].Name, Pos, 1));
+  end;
 
 {#U0728_302C}
-procedure U0728_302C(a1: Word);
 begin
+  if Length(Teams_4712[T].Name) < 19 then
+    for J := Length(Teams_4712[T].Name) + 1 to 13 do Teams_4712[T].Name[J] := ' ';
+  U0098_028C($87, $55, $EB, $73, $12, $0F, $11);
+  SetTextJustify(0, 2);
+  SetUserCharSize(1, 1, 1, 1);
+  SetColor(5);
+  OutTextXY($8A, $55, 'New Team Name:');
+  U0098_028C($8C, $64, $E6, $6E, $12, $11, $0F);
+  SetTextJustify(0, 1);
+  SetColor(0);
+  for Pos := 1 to Length(Teams_4712[T].Name) do
+    OutTextXY((Pos - 1) * 6 + $8F, $68, Copy(Teams_4712[T].Name, Pos, 1));
+  Inc(Teams_4712[T].Name[0]);
+  Pos := Length(Teams_4712[T].Name);
+  Done := False;
+  repeat
+    U0728_2D41;
+    Changed := False;
+    repeat
+      repeat until KeyPressed;
+      g_46C9 := ReadKey;
+      if (g_46C9 in [#8]) and (Pos > 1) then
+      begin
+        NewPos := Pos - 1;
+        Teams_4712[T].Name[NewPos] := ' ';
+        Changed := True;
+      end;
+      if g_46C9 in [#13, #27] then
+      begin
+        Done := True;
+        Changed := True;
+      end;
+      if g_46C9 in [' '..'}'] then
+      begin
+        Teams_4712[T].Name[Pos] := g_46C9;
+        Changed := True;
+        NewPos := Pos + 1;
+        if Length(Teams_4712[T].Name) < NewPos then Inc(Teams_4712[T].Name[0]);
+      end;
+      if g_46C9 = #0 then
+      begin
+        g_46C9 := ReadKey;
+        if g_46C9 = 'G' then            { Home: clear }
+        begin
+          for Pos := Length(Teams_4712[T].Name) downto 1 do
+          begin
+            Teams_4712[T].Name[Pos] := ' ';
+            U0728_2D41;
+            U0728_2E8E;
+          end;
+          Teams_4712[T].Name := '  ';
+          NewPos := 1;
+        end;
+        if g_46C9 = 'S' then            { Del }
+        begin
+          Teams_4712[T].Name[Pos] := ' ';
+          Changed := True;
+          NewPos := Pos;
+        end;
+        if g_46C9 = 'O' then            { End }
+        begin
+          Changed := True;
+          NewPos := Length(Teams_4712[T].Name);
+        end;
+        if (g_46C9 = KeyLt_3719) and (Pos > 1) then
+        begin
+          NewPos := Pos - 1;
+          Changed := True;
+        end;
+        if (g_46C9 = KeyRt_3718) and (Length(Teams_4712[T].Name) > Pos) then
+        begin
+          NewPos := Pos + 1;
+          Changed := True;
+        end;
+      end;
+    until Changed = True;
+    if NewPos > 13 then NewPos := 13;
+    if Length(Teams_4712[T].Name) > 13 then Teams_4712[T].Name[0] := #13;
+    U0728_2E8E;
+    Pos := NewPos;
+  until Done;
+  while (Teams_4712[T].Name[Length(Teams_4712[T].Name)] in [#0, ' ']) and
+        (Length(Teams_4712[T].Name) > 0) do
+    Dec(Teams_4712[T].Name[0]);
 end;
 
+{ build the team table from the players' team numbers; show each team,
+  let humans name their team, give computer-only teams a random name }
 {#U0728_3449}
 procedure U0728_3449;
+var
+  T, P: Integer;
 begin
+  FillChar(Teams_4712, SizeOf(Teams_4712), 0);
+  g_4622 := 0;
+  for g_461E := 1 to g_46B4 do
+  begin
+    Teams_4712[g_461E].f0E := 1;
+    for g_4620 := 1 to g_46B4 do
+      if Players_3F0E[g_4620].Team = g_461E then
+      begin
+        Inc(Teams_4712[g_461E].f0F);
+        if Control_E480[g_4620] <> 3 then Teams_4712[g_461E].f0E := 0;
+      end;
+    if Teams_4712[g_461E].f0F <> 0 then Inc(g_4622);
+    Teams_4712[g_461E].Name := 'Team ' + U2918_02FE(g_4622);
+    if Teams_4712[g_461E].f0F = 1 then
+      for g_4620 := 1 to g_46B4 do
+        if Players_3F0E[g_4620].Team = g_461E then
+          Teams_4712[g_461E].Name := Players_3F0E[g_4620].Name;
+  end;
+  for T := 1 to g_46B4 do
+    if Teams_4712[T].f0F > 0 then
+    begin
+      U0098_028C($0A, $32, $6E, $3C, $12, $0F, $11);
+      SetTextStyle(2, 0, 4);
+      SetUserCharSize(1, 1, 1, 1);
+      SetTextJustify(0, 2);
+      SetColor(6);
+      OutTextXY($0F, $32, 'Team #' + U2918_02FE(T) + ':');
+      SetTextJustify(0, 2);
+      g_4622 := 0;
+      for P := 1 to g_46B4 do
+        if Players_3F0E[P].Team = T then
+        begin
+          Inc(g_4622);
+          SetColor(P + 19);
+          U0098_028C($14, 15 * g_4622 + $34, $78, 15 * g_4622 + $34 + 10, $12, $0F, $11);
+          OutTextXY($19, 15 * g_4622 + $33, Players_3F0E[P].Name);
+        end;
+      if Teams_4712[T].f0E = 0 then
+        U0728_302C(T)
+      else if Teams_4712[T].f0F > 1 then
+        repeat
+          g_462E := 1;
+          case Random(11) of
+            0: Teams_4712[T].Name := 'Bushwackers';
+            1: Teams_4712[T].Name := 'Crazy CPUs';
+            2: Teams_4712[T].Name := 'Tank Trashers';
+            3: Teams_4712[T].Name := 'Studs';
+            4: Teams_4712[T].Name := 'Human Mashers';
+            5: Teams_4712[T].Name := 'Crackshots';
+            6: Teams_4712[T].Name := 'Dungheaps';
+            7: Teams_4712[T].Name := 'Ugly Ducks';
+            8: Teams_4712[T].Name := 'Martians';
+            9: Teams_4712[T].Name := 'Gravy';
+            10: Teams_4712[T].Name := 'Boneheads';
+          end;
+          for g_4620 := 1 to g_46B4 do
+            if (Teams_4712[T].Name = Teams_4712[g_4620].Name) and (T <> g_4620) then
+              g_462E := 0;
+        until g_462E <> 0;
+      g_4622 := 0;
+      for P := 1 to g_46B4 do
+        if Players_3F0E[P].Team = T then
+        begin
+          Inc(g_4622);
+          U2823_00CC($12, 15 * g_4622 + $34 - 2, $7A, 15 * g_4622 + $34 + 10 + 2, SaveBuf_E496);
+        end;
+    end;
+  for g_4624 := $67 to $FA do
+    U2823_0AC0(g_4624, 0, g_4624, $C7, SaveBuf_E496);
 end;
+
 

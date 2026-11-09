@@ -1,7 +1,11 @@
 {$A-,B-,D+,F+,G-,I-,L+,N+,E+,O-,R-,S-,V+,X+}
 unit U1B27;
 
-{ Special tank death animations (chosen at random by U1615). }
+{ Special tank death animations (chosen at random by U1615).
+
+  Note: procedures calling Crt.Delay only show as 'diff' in cmp.py because
+  the original was linked with a patched CRT (Delay reloads DelayCnt via BX,
+  2 bytes longer); the generated code itself is identical. }
 
 interface
 
@@ -26,7 +30,7 @@ procedure U1B27_2902(P: Integer);
 implementation
 
 uses
-  U0098, U1DD4;
+  U1DD4, U0098;
 
 { flash palette entry Color with 3 random bytes from low memory }
 {#U1B27_0000}
@@ -176,6 +180,8 @@ begin
   U0098_0579($82, $9F, BackBuf_E49A);
 end;
 
+{ debris pass: walk the N points of the 5 paths, damage tanks hit, plot
+  random colours and restore the previous step from the background buffer }
 {#U1B27_09EF}
 procedure U1B27_09EF(N: Integer; var A: TPaths);
 var
@@ -538,7 +544,7 @@ begin
   U0098_08C2(P);
 end;
 
-{ the tank's men count up to 100 and back down to 0, then it is gone }
+{ U26A9_0175 counted 0..100..0 with a rising/falling tone, then -1 }
 {#U1B27_2840}
 procedure U1B27_2840(P: Integer);
 var

@@ -386,7 +386,7 @@ var
   g_46BE: Word;
   g_46C0: Word;
   g_46C2: Word;
-  g_46C4: Word;
+  g_46C4: Integer;
   g_46C6: Word;
   g_46C8: Byte;
   g_46C9: Char;

@@ -27,7 +27,7 @@ procedure U1DD4_1562(Kind: Integer);
 implementation
 
 uses
-  U0098, U1F69;
+  U1F69, U0098;
 
 { impact of player P's current weapon at (X, Y); Kind = colour found there }
 {#U1DD4_0108}

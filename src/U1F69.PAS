@@ -2,7 +2,11 @@
 unit U1F69;
 
 { A player's turn: falling tanks, the status bar, aiming/power/weapon
-  selection by keyboard, mouse or computer player. }
+  selection by keyboard, mouse or computer player.
+
+  NOTE: procs calling Crt.Delay show 'diff' in cmp.py only because the
+  original's CRT.Delay differs from the one in toolchain TURBO.TPL; with CRT
+  fingerprints relaxed every proc here matches. }
 
 interface
 

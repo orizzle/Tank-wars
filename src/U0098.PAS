@@ -598,7 +598,7 @@ begin
   U2968_005A;
   NoSound;
   SaveBuf_E496^ := Screen;
-  Color := GetBkColor;   { sic: restored with SetColor below }
+  Color := GetColor;
   GetTextSettings(TS);
   GetFillSettings(FS);
   GetViewSettings(VP);
@@ -657,7 +657,7 @@ begin
   U2968_005A;
   NoSound;
   SaveBuf_E496^ := Screen;
-  Color := GetBkColor;   { sic: restored with SetColor below }
+  Color := GetColor;
   GetTextSettings(TS);
   GetFillSettings(FS);
   GetViewSettings(VP);
@@ -704,7 +704,7 @@ begin
   U2968_005A;
   NoSound;
   SaveBuf_E496^ := Screen;
-  Color := GetBkColor;   { sic: restored with SetColor below }
+  Color := GetColor;
   GetTextSettings(TS);
   GetFillSettings(FS);
   GetViewSettings(VP);
@@ -833,7 +833,7 @@ begin
   U2968_005A;
   NoSound;
   SaveBuf_E496^ := Screen;
-  Color := GetBkColor;   { sic: restored with SetColor below }
+  Color := GetColor;
   GetTextSettings(TS);
   GetFillSettings(FS);
   GetViewSettings(VP);

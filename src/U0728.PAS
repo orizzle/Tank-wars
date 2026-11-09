@@ -19,6 +19,14 @@ var
     (DS 007C..087B, only partly typed there yet) }
   AINames_007C: array[0..7] of String absolute c_007C;
 
+type
+  { per-player block of $7DA bytes, cleared by U0728_0216 (structure unknown;
+    array[1..10] at DS 5134, indexed from 0 at DS 495A) }
+  T7DA = array[0..$7D9] of Byte;
+
+var
+  Rec_495A: array[0..10] of T7DA absolute g_495A;
+
 function U0728_0007(B: Boolean): string;
 function U0728_0043(B: Boolean): string;
 procedure U0728_0078(I: Integer);
@@ -36,9 +44,7 @@ function U0728_0FFC(N: Integer): string;
 procedure U0728_1186;
 procedure U0728_1DD5;
 procedure U0728_2609;
-procedure U0728_2D41(a1: Word);
-procedure U0728_2E8E(a1: Word);
-procedure U0728_302C(a1: Word);
+procedure U0728_302C(T: Integer);
 procedure U0728_3449;
 procedure U0728_3A10(Kind: Integer);
 procedure U0728_3BC3;

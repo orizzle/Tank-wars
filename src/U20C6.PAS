@@ -2,14 +2,18 @@
 unit U20C6;
 
 { New round: sky backgrounds, terrain generation, tank placement and the
-  weapon/guidance icon bar. }
+  weapon/guidance icon bar.
+
+  NOTE: procs calling Crt.Delay show 'diff' in cmp.py only because the
+  original's CRT.Delay differs from the one in toolchain TURBO.TPL; with CRT
+  fingerprints relaxed every proc here matches. }
 
 interface
 
 uses
   Graph, Crt, Dos, Printer, U2968, U2918,
   U2823, U27D4, U27D1, U27B1, U26D4, U26A9,
-  U23C3, U2390, U22B7;
+  U23C3;
 
 procedure U20C6_0004(Sky: Integer);
 procedure U20C6_099E;
@@ -18,7 +22,7 @@ procedure U20C6_1268;
 implementation
 
 uses
-  U0098, U1F69;
+  U22B7, U0098, U1F69;
 
 { Draw sky background number Sky into the back buffer and copy it to the
   playfield; also sets up the palette cycler for it. }
