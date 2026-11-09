@@ -34,7 +34,7 @@ unit uses Graph, Crt, Dos, Printer and every user unit to its right).
 ```
 python3 tools/build.py --work build/w_NAME --mine U0728        # ~2 s
 python3 tools/cmp.py   --work build/w_NAME U0728               # per-proc status
-python3 tools/cmp.py   --work build/w_NAME --proc U0728_05D8   # side-by-side diff
+python3 tools/cmp.py   --work build/w_NAME --proc ShowCpuType   # side-by-side diff
 python3 tools/cmp.py   --work build/w_NAME --layout            # globals at right DS offsets?
 python3 tools/cmp.py   --work build/w_NAME --data              # typed-const image identical?
 ```
@@ -136,11 +136,11 @@ release. The untouched file is kept as `turbo.tpl.pristine`.
    interface). Check the order with the `Start Stop` table in your BOMB.MAP.
 2. **Nested procedures** exist (called with `push bp` frame link). Marker
    convention: nested proc -> marker on the SAME line as its header
-   (`{#U0728_3EA1} procedure U0728_3EA1;`); its parent -> marker on the line
+   (`{#U0728_3EA1} procedure DrawPlayerNameCursor;`); its parent -> marker on the line
    directly before the parent's `begin`. KEEPALL handles both. Nested procs are
    not in the interface.
 3. **TP `interrupt` procedures**: entry = the register pushes (U27B1_0008 was
-   renamed U27B1_0000).
+   renamed KeyboardIsr).
 4. Build fallback: on an error in somebody else's unit, build.py now retries
    with a consistent snapshot of the last successful build (build/lkg_full) for
    all units except yours (`--mine`). So keep `--mine` accurate.

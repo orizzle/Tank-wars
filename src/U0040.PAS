@@ -34,7 +34,7 @@ var
   KbdHead: Word absolute $40:$1A;   { BIOS keyboard buffer pointers }
   KbdTail: Word absolute $40:$1C;
 
-procedure U0040_0014;
+procedure ShowTitleScreen;
 
 implementation
 
@@ -46,7 +46,7 @@ uses
   U1F69, U20C6, U22B7, U2390;
 
 {#U0040_0014}
-procedure U0040_0014;
+procedure ShowTitleScreen;
 label
   Abort;
 var
@@ -64,21 +64,21 @@ begin
   GetMem(Blue, SizeOf(TCycle));
   GetMem(Green, SizeOf(TCycle));
   GetMem(SavePal, 768);
-  U2823_0C20(0, 255, SavePal);
+  ReadDacBlock(0, 255, SavePal);
 
   { colour ramps for the palette cycling }
   FillChar(Red^, SizeOf(TCycle), 0);
-  g_469A := 6.3;
-  for g_461E := 1 to 40 do
-    Red^[g_461E].R := Trunc((g_461E mod 20) * g_469A);
+  TmpScale := 6.3;
+  for LoopI := 1 to 40 do
+    Red^[LoopI].R := Trunc((LoopI mod 20) * TmpScale);
   FillChar(Blue^, SizeOf(TCycle), 0);
-  g_469A := 6.3;
-  for g_461E := 1 to 40 do
-    Blue^[g_461E].B := Trunc((g_461E mod 10) * g_469A);
+  TmpScale := 6.3;
+  for LoopI := 1 to 40 do
+    Blue^[LoopI].B := Trunc((LoopI mod 10) * TmpScale);
   FillChar(Green^, SizeOf(TCycle), 0);
-  g_469A := 6.3;
-  for g_461E := 1 to 40 do
-    Green^[g_461E].G := Trunc((g_461E mod 10) * g_469A);
+  TmpScale := 6.3;
+  for LoopI := 1 to 40 do
+    Green^[LoopI].G := Trunc((LoopI mod 10) * TmpScale);
 
   Have1 := False;
   Have2 := False;
@@ -108,54 +108,54 @@ begin
   if Have2 then
   begin
     FillChar(Back^.Pal, 768, 0);
-    g_461E := 0;
-    g_4620 := 0;
+    LoopI := 0;
+    LoopJ := 0;
     if Have2 then
-      g_E7C4(0, 255, @Back^.Pal);
+      PalBlockHook(0, 255, @Back^.Pal);
     Screen := Back^.Pixels;
-    g_E7C4(0, 255, @Pic^.Pal);
-    if U0098_09B2 then goto Abort;
-    for g_461E := 135 to 154 do
+    PalBlockHook(0, 255, @Pic^.Pal);
+    if AbortKeysDown then goto Abort;
+    for LoopI := 135 to 154 do
     begin
-      U0098_0455(@Pic^, @Screen, g_461E);
-      if U0098_09B2 then goto Abort;
+      CopyColorPixels(@Pic^, @Screen, LoopI);
+      if AbortKeysDown then goto Abort;
     end;
-    for g_461E := 16 to 20 do
+    for LoopI := 16 to 20 do
     begin
-      U0098_0455(@Pic^, @Screen, g_461E);
-      if U0098_09B2 then goto Abort;
+      CopyColorPixels(@Pic^, @Screen, LoopI);
+      if AbortKeysDown then goto Abort;
     end;
-    for g_461E := 115 to 124 do
+    for LoopI := 115 to 124 do
     begin
-      U0098_0455(@Pic^, @Screen, g_461E);
-      if U0098_09B2 then goto Abort;
+      CopyColorPixels(@Pic^, @Screen, LoopI);
+      if AbortKeysDown then goto Abort;
     end;
-    for g_461E := 155 to 164 do
+    for LoopI := 155 to 164 do
     begin
-      U0098_0455(@Pic^, @Screen, g_461E);
-      U0098_0455(@Pic^, @Screen, g_461E + 20);
-      if U0098_09B2 then goto Abort;
+      CopyColorPixels(@Pic^, @Screen, LoopI);
+      CopyColorPixels(@Pic^, @Screen, LoopI + 20);
+      if AbortKeysDown then goto Abort;
     end;
-    if U0098_09B2 then goto Abort;
+    if AbortKeysDown then goto Abort;
     { flush the BIOS keyboard buffer }
     KbdHead := KbdTail;
-    g_461E := 0;
-    g_462F := 0;
+    LoopI := 0;
+    DoneFlag := 0;
     repeat
-      Inc(g_461E);
-      if g_461E = 21 then
-        g_461E := 1;
-      g_E7C4(135, 20, @Red^[g_461E]);
+      Inc(LoopI);
+      if LoopI = 21 then
+        LoopI := 1;
+      PalBlockHook(135, 20, @Red^[LoopI]);
       Delay(60);
       if KeyPressed then
-        g_462F := 1;
-      if U2968_0077(1) or U2968_0077(2) then
-        g_462F := 1;
-    until g_462F <> 0;
+        DoneFlag := 1;
+      if MouseBtnsDown(1) or MouseBtnsDown(2) then
+        DoneFlag := 1;
+    until DoneFlag <> 0;
   Abort:
     KbdHead := KbdTail;
   end;
-  g_E7C4(0, 255, SavePal);
+  PalBlockHook(0, 255, SavePal);
   FreeMem(SavePal, 768);
   FreeMem(Back, SizeOf(TRawPicture));
   FreeMem(Pic, SizeOf(TRawPicture));

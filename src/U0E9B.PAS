@@ -11,22 +11,22 @@ uses
   U2823, U27D4, U27D1, U27B1, U26D4, U26A9,
   U23C3;
 
-procedure U0E9B_0000(A, B: Integer);
-procedure U0E9B_015B(PNum: Integer);
-procedure U0E9B_0E1F;
-procedure U0E9B_23EF;
-procedure U0E9B_24E4(P: Integer);
-procedure U0E9B_2B8E(T: Integer);
-procedure U0E9B_369F;
-procedure U0E9B_39EA(FileName: string);
-procedure U0E9B_3E7A(FileName: string);
-procedure U0E9B_455E;
-procedure U0E9B_4B93;
-procedure U0E9B_54C6;
-procedure U0E9B_5893;
-procedure U0E9B_63ED;
-procedure U0E9B_7242;
-procedure U0E9B_7523;
+procedure SwapPlayers(A, B: Integer);
+procedure DrawShopButtons(PNum: Integer);
+procedure RunShop;
+procedure ShufflePlayers;
+procedure ShowPlayerStats(P: Integer);
+procedure ShowTeamStats(T: Integer);
+procedure EditSaveName;
+procedure SaveGame(FileName: string);
+procedure LoadGame(FileName: string);
+procedure SaveGameDialog;
+procedure LoadGameDialog;
+procedure AddGamesDialog;
+procedure ShowStandings;
+procedure ShowTeamStandings;
+procedure PrintFinalResults;
+procedure PlayGames;
 
 implementation
 

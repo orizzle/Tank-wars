@@ -13,16 +13,16 @@ uses
   Graph, Crt, Dos, Printer, U2968, U2918,
   U2823, U27D4, U27D1, U27B1;
 
-function U26D4_0000(Deg: Integer): Real;
-function U26D4_005A(Deg: Integer): Real;
-function U26D4_00BD(Deg: Integer): Real;
+function SinDeg(Deg: Integer): Real;
+function CosDeg(Deg: Integer): Real;
+function TanDeg(Deg: Integer): Real;
 procedure SinTable;
 
 implementation
 
 { Sin(Deg), Deg in degrees }
 {#U26D4_0000}
-function U26D4_0000(Deg: Integer): Real; assembler;
+function SinDeg(Deg: Integer): Real; assembler;
 var
   Sign: Byte;
 asm
@@ -53,7 +53,7 @@ end;
 
 { Cos(Deg) = Sin(90 - Deg) }
 {#U26D4_005A}
-function U26D4_005A(Deg: Integer): Real; assembler;
+function CosDeg(Deg: Integer): Real; assembler;
 var
   Sign: Byte;
 asm
@@ -87,9 +87,9 @@ end;
 
 { Tan(Deg) }
 {#U26D4_00BD}
-function U26D4_00BD(Deg: Integer): Real;
+function TanDeg(Deg: Integer): Real;
 begin
-  U26D4_00BD := U26D4_0000(Deg) / U26D4_005A(Deg);
+  TanDeg := SinDeg(Deg) / CosDeg(Deg);
 end;
 
 procedure SinTable; external; {$L SINTAB.OBJ}

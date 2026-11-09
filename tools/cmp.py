@@ -168,12 +168,14 @@ def new_side(work):
         pubs[pn.upper()] = (sg, of)
     para2name = {p: n for p, n in table}
     for nm in markers:
-        if nm not in procs and nm in pubs:
-            sg, of = pubs[nm]
+        pn = U.name_of(nm).upper()
+        if nm not in procs and pn in pubs:
+            sg, of = pubs[pn]
             if sg in para2name:
                 procs[nm] = (para2name[sg], of)
     # also externals declared without markers but named like Uxxxx_OOOO
     for pn, (sg, of) in pubs.items():
+        pn = U.OLDNAME.get(pn, pn)
         if re.match(r'^U[0-9A-F]{4}_[0-9A-F]{4}$', pn) and pn not in procs and sg in para2name:
             procs[pn] = (para2name[sg], of)
     s = Side(m, table, dseg, procs)
@@ -371,7 +373,7 @@ def main():
     ap.add_argument('--proc')
     ap.add_argument('--full', action='store_true')
     ap.add_argument('--data', action='store_true')
-    ap.add_argument('--layout', action='store_true', help='check that every public NAME_XXXX in DATA is at DS:XXXX')
+    ap.add_argument('--layout', action='store_true', help='check that every global named NAME_XXXX (or renamed from one, notes/names.tsv) is at DS:XXXX')
     ap.add_argument('--json', action='store_true')
     ap.add_argument('-v', action='store_true', help='list every procedure')
     a = ap.parse_args()
@@ -392,7 +394,7 @@ def main():
         bad = 0
         n = 0
         for sg, of, nm in mp['publics']:
-            mm = re.search(r'_([0-9A-F]{4})$', nm)
+            mm = re.search(r'_([0-9A-F]{4})$', U.OLDNAME.get(nm.upper(), nm))
             if sg == dseg and mm:
                 n += 1
                 want = int(mm.group(1), 16)

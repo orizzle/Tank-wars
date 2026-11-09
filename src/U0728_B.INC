@@ -4,238 +4,238 @@
 { set up the background palette (DAC 30..59) and fill the screen with
   the background pattern; Kind 0 = concentric rectangles, 1 = lines }
 {#U0728_3A10}
-procedure U0728_3A10(Kind: Integer);
+procedure DrawMenuBackground(Kind: Integer);
 begin
-  for g_461E := 30 to 59 do
-    g_E7C8(g_461E, g_461E, 0, g_461E);
+  for LoopI := 30 to 59 do
+    RGBHook(LoopI, LoopI, 0, LoopI);
   case Kind of
     0:
       begin
         case Random(2) of
-          0: g_462A := 100;
-          1: g_462A := 160;
+          0: TmpC := 100;
+          1: TmpC := 160;
         end;
-        for g_461E := 0 to g_462A do
-          U2823_0031(g_461E, g_461E, 319 - g_461E, 199 - g_461E, g_461E mod 30 + 30);
-        PalCycle_9FB8.First := 30;
-        PalCycle_9FB8.Field2 := 59;
-        PalCycle_9FB8.Count := PalCycle_9FB8.Field2 - PalCycle_9FB8.First;
-        PalCycle_9FB8.Pos := 0;
-        U2823_0C20(30, 30, @Pal_DE80);
-        U2823_0C20(30, 30, @Pal_DE80[31]);
-        PalCycle_9FB8.Pal := @Pal_DE80;
-        PalCycle_9FB8.Mode := 1;
-        PalCycle_9FB8.Speed := g_E796;
+        for LoopI := 0 to TmpC do
+          DrawRect(LoopI, LoopI, 319 - LoopI, 199 - LoopI, LoopI mod 30 + 30);
+        PalCycle.First := 30;
+        PalCycle.Field2 := 59;
+        PalCycle.Count := PalCycle.Field2 - PalCycle.First;
+        PalCycle.Pos := 0;
+        ReadDacBlock(30, 30, @CyclePal);
+        ReadDacBlock(30, 30, @CyclePal[31]);
+        PalCycle.Pal := @CyclePal;
+        PalCycle.Mode := 1;
+        PalCycle.Speed := PalSpeed;
       end;
     1:
       begin
-        for g_461E := 0 to 199 do
-          U2823_09E4(0, g_461E, 319, g_461E, g_461E mod 30 + 30);
-        PalCycle_9FB8.First := 30;
-        PalCycle_9FB8.Field2 := 59;
-        PalCycle_9FB8.Count := PalCycle_9FB8.Field2 - PalCycle_9FB8.First;
-        PalCycle_9FB8.Pos := 0;
-        U2823_0C20(30, 30, @Pal_DE80);
-        U2823_0C20(30, 30, @Pal_DE80[31]);
-        PalCycle_9FB8.Pal := @Pal_DE80;
-        PalCycle_9FB8.Mode := 1;
-        PalCycle_9FB8.Speed := g_E796;
+        for LoopI := 0 to 199 do
+          DrawLine(0, LoopI, 319, LoopI, LoopI mod 30 + 30);
+        PalCycle.First := 30;
+        PalCycle.Field2 := 59;
+        PalCycle.Count := PalCycle.Field2 - PalCycle.First;
+        PalCycle.Pos := 0;
+        ReadDacBlock(30, 30, @CyclePal);
+        ReadDacBlock(30, 30, @CyclePal[31]);
+        PalCycle.Pal := @CyclePal;
+        PalCycle.Mode := 1;
+        PalCycle.Speed := PalSpeed;
       end;
   end;
-  U27D4_003D(PalCycle_9FB8);
+  SetPalCycle(PalCycle);
 end;
 
 { main driver (called from the main program): NEW = beginner game with
   default settings, otherwise title / intro screens and player setup }
 {#U0728_3BC3}
-procedure U0728_3BC3;
+procedure SetupGame;
 var
   X1, X2, Y1, Y2: Integer;
 begin
-  for g_461E := 1 to 10 do
-    U0728_0216(g_461E);
-  if g_E794 <> 0 then
+  for LoopI := 1 to 10 do
+    ResetPlayer(LoopI);
+  if BeginnerGame <> 0 then
   begin
-    g_E787 := 0;
-    g_E77A := 100;
-    g_E780 := 0;
-    g_46BC := 1;
-    g_E789 := 0;
-    g_E78A := 1;
-    g_E77C := 5;
-    g_E78D := 1;
-    g_46B4 := 2;
-    g_E78F := 0;
-    g_E782 := 0;
-    g_E77E := 1;
-    SaveName_46FC := 'QWERTYUI';
-    g_46F0 := 0;
-    g_46F1 := 0;
-    g_46F2 := 0;
-    g_E794 := 0;
-    g_46EC := 0;
-    g_E791 := 0;
-    Players_3F0E[2].Name := 'Mr. Stupid';
-    Control_E480[2] := 3;
-    U0728_0078(2);
+    FlySound := 0;
+    CrumblePct := 100;
+    WallControl := 0;
+    GameNo := 1;
+    InvisoBall := 0;
+    ShotTrail := 1;
+    GamesToPlay := 5;
+    TanksFall := 1;
+    NumPlayers := 2;
+    CompuBuy := 0;
+    BackControl := 0;
+    WindControl := 1;
+    SaveName := 'QWERTYUI';
+    SaveRequested := 0;
+    LoadRequested := 0;
+    AutoSave := 0;
+    BeginnerGame := 0;
+    AllComputers := 0;
+    TeamPlay := 0;
+    Players[2].Name := 'Mr. Stupid';
+    Controls[2] := 3;
+    CreateAIPlayer(2);
   end
   else
   begin
-    g_461E := 0;
-    g_4620 := 0;
-    GetMem(SaveBuf_E496, 64000);
-    U0098_01BD;
+    LoopI := 0;
+    LoopJ := 0;
+    GetMem(SaveBuf, 64000);
+    InitPanelGreys;
     SetViewPort(0, 0, 319, 199, True);
-    U2823_0006;
-    U0728_3A10(0);
-    U0728_06D1;
-    TScreenBuf(SaveBuf_E496^) := TScreenBuf(Ptr($A000, 0)^);
-    U0728_08E6;
-    U0728_1DD5;
-    U2823_0006;
-    for g_461E := 35 downto 0 do
+    FetchClipWindow;
+    DrawMenuBackground(0);
+    DrawTitleBox;
+    TScreenBuf(SaveBuf^) := TScreenBuf(Ptr($A000, 0)^);
+    DrawMainMenuHeader;
+    RunMainMenu;
+    FetchClipWindow;
+    for LoopI := 35 downto 0 do
     begin
-      U2823_0687(50, 150, g_461E, g_461E, SaveBuf_E496);
-      U2823_0687(51, 150, g_461E, g_461E, SaveBuf_E496);
+      CopyEllipse(50, 150, LoopI, LoopI, SaveBuf);
+      CopyEllipse(51, 150, LoopI, LoopI, SaveBuf);
     end;
-    for g_461E := 100 downto 0 do
+    for LoopI := 100 downto 0 do
     begin
-      U2823_0687(160, 100, g_461E, g_461E, SaveBuf_E496);
-      U2823_0687(161, 100, g_461E, g_461E, SaveBuf_E496);
+      CopyEllipse(160, 100, LoopI, LoopI, SaveBuf);
+      CopyEllipse(161, 100, LoopI, LoopI, SaveBuf);
     end;
-    g_E7D6 := $A000;
-    if g_46F1 <> 0 then
-      U0E9B_4B93;
-    if g_46F1 = 0 then
-      U0728_5083;
-    if (g_46F1 = 0) and (g_E791 <> 0) then
-      U0728_2609;
+    VideoSeg := $A000;
+    if LoadRequested <> 0 then
+      LoadGameDialog;
+    if LoadRequested = 0 then
+      PlayerSetupScreen;
+    if (LoadRequested = 0) and (TeamPlay <> 0) then
+      TeamSetupScreen;
     X1 := 0;
     X2 := 0;
     Y1 := 0;
     Y2 := 0;
-    for g_461E := 0 to 520 do
+    for LoopI := 0 to 520 do
     begin
       if X1 < 319 then Inc(X1) else Inc(X2);
       if Y2 < 199 then Inc(Y2) else Inc(Y1);
-      U2823_0AC0(X1, X2, Y1, Y2, SaveBuf_E496);
+      CopyLine(X1, X2, Y1, Y2, SaveBuf);
     end;
-    if (g_46F1 = 0) and (g_E791 <> 0) then
-      U0728_3449;
-    for g_4624 := 0 to 319 do
-      U2823_09E4(g_4624, 0, 319 - g_4624, 199, 0);
-    for g_4626 := 0 to 199 do
-      U2823_09E4(319, g_4626, 0, 199 - g_4626, 0);
-    U27D4_003D(NoCycle_3706);
-    FreeMem(SaveBuf_E496, 64000);
+    if (LoadRequested = 0) and (TeamPlay <> 0) then
+      BuildTeams;
+    for TmpX := 0 to 319 do
+      DrawLine(TmpX, 0, 319 - TmpX, 199, 0);
+    for TmpY := 0 to 199 do
+      DrawLine(319, TmpY, 0, 199 - TmpY, 0);
+    SetPalCycle(NoPalCycle);
+    FreeMem(SaveBuf, 64000);
   end;
 end;
 
 { edit the name of player P in a small dialog box }
-procedure U0728_4183(P: Word);
+procedure EditPlayerName(P: Word);
 var
   Buf: Pointer;
   Pos, NewPos, I: Integer;
   Done, Changed: Boolean;
 
   { draw the block cursor under character Pos }
-  {#U0728_3EA1} procedure U0728_3EA1;
+  {#U0728_3EA1} procedure DrawPlayerNameCursor;
   begin
-    U2823_0031((Pos - 1) * 6 + 118 - 1, 100, (Pos - 1) * 6 + 118 + 4, 110, 18);
-    U2823_0031((Pos - 1) * 6 + 118, 101, (Pos - 1) * 6 + 118 + 3, 109, 18);
-    U2823_0031((Pos - 1) * 6 + 118 + 1, 102, (Pos - 1) * 6 + 118 + 2, 108, 18);
+    DrawRect((Pos - 1) * 6 + 118 - 1, 100, (Pos - 1) * 6 + 118 + 4, 110, 18);
+    DrawRect((Pos - 1) * 6 + 118, 101, (Pos - 1) * 6 + 118 + 3, 109, 18);
+    DrawRect((Pos - 1) * 6 + 118 + 1, 102, (Pos - 1) * 6 + 118 + 2, 108, 18);
     SetColor(0);
-    OutTextXY((Pos - 1) * 6 + 118, 104, Copy(Players_3F0E[P].Name, Pos, 1));
-    U2823_00CC((Pos - 1) * 6 + 118 - 1, 109, (Pos - 1) * 6 + 118 + 4, 110, SaveBuf_E496);
+    OutTextXY((Pos - 1) * 6 + 118, 104, Copy(Players[P].Name, Pos, 1));
+    CopyBar((Pos - 1) * 6 + 118 - 1, 109, (Pos - 1) * 6 + 118 + 4, 110, SaveBuf);
   end;
 
   { remove the cursor again }
-  {#U0728_3FEE} procedure U0728_3FEE;
+  {#U0728_3FEE} procedure HidePlayerNameCursor;
   begin
-    U2823_0031((Pos - 1) * 6 + 118 - 1, 100, (Pos - 1) * 6 + 118 + 4, 110, 18);
-    U2823_0031((Pos - 1) * 6 + 118, 101, (Pos - 1) * 6 + 118 + 3, 109, 18);
-    U2823_0031((Pos - 1) * 6 + 118 + 1, 102, (Pos - 1) * 6 + 118 + 2, 108, 18);
+    DrawRect((Pos - 1) * 6 + 118 - 1, 100, (Pos - 1) * 6 + 118 + 4, 110, 18);
+    DrawRect((Pos - 1) * 6 + 118, 101, (Pos - 1) * 6 + 118 + 3, 109, 18);
+    DrawRect((Pos - 1) * 6 + 118 + 1, 102, (Pos - 1) * 6 + 118 + 2, 108, 18);
     SetColor(0);
-    OutTextXY((Pos - 1) * 6 + 118, 104, Copy(Players_3F0E[P].Name, Pos, 1));
+    OutTextXY((Pos - 1) * 6 + 118, 104, Copy(Players[P].Name, Pos, 1));
   end;
 
 { marker here (not above the header): the nested procedures come first in the code }
 {#U0728_4183}
 begin
   GetMem(Buf, $409);
-  if Length(Players_3F0E[P].Name) < 19 then
-    for I := Length(Players_3F0E[P].Name) + 1 to 13 do
-      Players_3F0E[P].Name[I] := ' ';
+  if Length(Players[P].Name) < 19 then
+    for I := Length(Players[P].Name) + 1 to 13 do
+      Players[P].Name[I] := ' ';
   GetImage(108, 83, 212, 117, Buf^);
-  U0098_028C(110, 85, 210, 115, 18, 15, 17);
+  DrawPanel3D(110, 85, 210, 115, 18, 15, 17);
   SetTextJustify(0, 2);
   SetUserCharSize(1, 1, 1, 1);
   SetColor(5);
   OutTextXY(113, 85, 'NAME:');
-  U0098_028C(115, 100, 205, 110, 18, 17, 15);
+  DrawPanel3D(115, 100, 205, 110, 18, 17, 15);
   SetTextJustify(0, 1);
   SetColor(0);
-  for Pos := 1 to Length(Players_3F0E[P].Name) do
-    OutTextXY((Pos - 1) * 6 + 118, 104, Copy(Players_3F0E[P].Name, Pos, 1));
-  Inc(Players_3F0E[P].Name[0]);
-  Pos := Length(Players_3F0E[P].Name);
+  for Pos := 1 to Length(Players[P].Name) do
+    OutTextXY((Pos - 1) * 6 + 118, 104, Copy(Players[P].Name, Pos, 1));
+  Inc(Players[P].Name[0]);
+  Pos := Length(Players[P].Name);
   Done := False;
   repeat
-    U0728_3EA1;
+    DrawPlayerNameCursor;
     Changed := False;
     repeat
       repeat until KeyPressed;
-      g_46C9 := ReadKey;
-      if (g_46C9 in [#8]) and (Pos > 1) then
+      KeyChar := ReadKey;
+      if (KeyChar in [#8]) and (Pos > 1) then
       begin
         NewPos := Pos - 1;
-        Players_3F0E[P].Name[NewPos] := ' ';
+        Players[P].Name[NewPos] := ' ';
         Changed := True;
       end;
-      if g_46C9 in [#13, #27] then
+      if KeyChar in [#13, #27] then
       begin
         Done := True;
         Changed := True;
       end;
-      if g_46C9 in [' '..'}'] then
+      if KeyChar in [' '..'}'] then
       begin
-        Players_3F0E[P].Name[Pos] := g_46C9;
+        Players[P].Name[Pos] := KeyChar;
         Changed := True;
         NewPos := Pos + 1;
-        if Length(Players_3F0E[P].Name) < NewPos then
-          Inc(Players_3F0E[P].Name[0]);
+        if Length(Players[P].Name) < NewPos then
+          Inc(Players[P].Name[0]);
       end;
-      if g_46C9 = #0 then
+      if KeyChar = #0 then
       begin
-        g_46C9 := ReadKey;
-        if g_46C9 = #$47 then           { Home: clear }
+        KeyChar := ReadKey;
+        if KeyChar = #$47 then           { Home: clear }
         begin
-          for Pos := Length(Players_3F0E[P].Name) downto 1 do
+          for Pos := Length(Players[P].Name) downto 1 do
           begin
-            Players_3F0E[P].Name[Pos] := ' ';
-            U0728_3EA1;
-            U0728_3FEE;
+            Players[P].Name[Pos] := ' ';
+            DrawPlayerNameCursor;
+            HidePlayerNameCursor;
           end;
-          Players_3F0E[P].Name := '  ';
+          Players[P].Name := '  ';
           NewPos := 1;
         end;
-        if g_46C9 = #$53 then           { Del }
+        if KeyChar = #$53 then           { Del }
         begin
-          Players_3F0E[P].Name[Pos] := ' ';
+          Players[P].Name[Pos] := ' ';
           Changed := True;
           NewPos := Pos;
         end;
-        if g_46C9 = #$4F then           { End }
+        if KeyChar = #$4F then           { End }
         begin
           Changed := True;
-          NewPos := Length(Players_3F0E[P].Name);
+          NewPos := Length(Players[P].Name);
         end;
-        if (g_46C9 = KeyLt_3719) and (Pos > 1) then
+        if (KeyChar = ScanLeft) and (Pos > 1) then
         begin
           NewPos := Pos - 1;
           Changed := True;
         end;
-        if (g_46C9 = KeyRt_3718) and (Length(Players_3F0E[P].Name) > Pos) then
+        if (KeyChar = ScanRight) and (Length(Players[P].Name) > Pos) then
         begin
           NewPos := Pos + 1;
           Changed := True;
@@ -244,33 +244,33 @@ begin
     until Changed = True;
     if NewPos > 13 then
       NewPos := 13;
-    if Length(Players_3F0E[P].Name) > 13 then
-      Players_3F0E[P].Name[0] := #13;
-    U0728_3FEE;
+    if Length(Players[P].Name) > 13 then
+      Players[P].Name[0] := #13;
+    HidePlayerNameCursor;
     Pos := NewPos;
   until Done;
-  while (Players_3F0E[P].Name[Length(Players_3F0E[P].Name)] in [#0, ' ']) and
-        (Length(Players_3F0E[P].Name) > 0) do
-    Dec(Players_3F0E[P].Name[0]);
+  while (Players[P].Name[Length(Players[P].Name)] in [#0, ' ']) and
+        (Length(Players[P].Name) > 0) do
+    Dec(Players[P].Name[0]);
   PutImage(108, 83, Buf^, 0);
   FreeMem(Buf, $409);
 end;
 
 { let the user pick the computer player type (AI) of player P }
 {#U0728_46AC}
-procedure U0728_46AC(P: Word);
+procedure SelectAIType(P: Word);
 var
   Buf: Pointer;
   Sel, OldSel, Choice, I: Integer;
   Done, MouseL, MouseR, Unused10, B11, B12, Picked, Unused14: Boolean;  { B11/B12 only cleared }
 begin
-  repeat until not U2968_0077(1) and not U2968_0077(2);
+  repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
   GetMem(Buf, $8A7);
   GetImage(114, 56, 206, 144, Buf^);
-  U0098_028C(116, 58, 204, 142, 18, 15, 17);
+  DrawPanel3D(116, 58, 204, 142, 18, 15, 17);
   Sel := 0;
   for I := 1 to 6 do
-    if Players_3F0E[P].Name = AINames_007C[I] then
+    if Players[P].Name = AINames[I] then
       Sel := I;
   SetColor(6);
   SetTextJustify(1, 1);
@@ -312,63 +312,63 @@ begin
     B12 := MouseL;
     Picked := MouseL;
     repeat
-      U0098_03A8(119, 10 * Sel + 63);
-      U0098_03A8(201, 10 * Sel + 63);
-      U2968_004D;
+      DrawPlusMark(119, 10 * Sel + 63);
+      DrawPlusMark(201, 10 * Sel + 63);
+      ShowMouseCursor;
       OldSel := Sel;
       repeat
         if KeyPressed then
         begin
-          g_46C9 := UpCase(ReadKey);
-          if g_46C9 = #27 then Choice := 0;
-          if g_46C9 in [#13, ' '] then
+          KeyChar := UpCase(ReadKey);
+          if KeyChar = #27 then Choice := 0;
+          if KeyChar in [#13, ' '] then
           begin
             Choice := Sel;
             Picked := True;
           end;
-          if g_46C9 = '?' then Choice := 0;
-          if g_46C9 = 'S' then Choice := 1;
-          if g_46C9 = 'L' then Choice := 2;
-          if g_46C9 = 'R' then Choice := 3;
-          if g_46C9 = 'B' then Choice := 4;
-          if g_46C9 = 'W' then Choice := 5;
-          if g_46C9 = 'T' then Choice := 6;
-          if g_46C9 = 'M' then Choice := 7;
-          if g_46C9 in ['?', 'S', 'L', 'R', 'B', 'W', 'T', 'M'] then
+          if KeyChar = '?' then Choice := 0;
+          if KeyChar = 'S' then Choice := 1;
+          if KeyChar = 'L' then Choice := 2;
+          if KeyChar = 'R' then Choice := 3;
+          if KeyChar = 'B' then Choice := 4;
+          if KeyChar = 'W' then Choice := 5;
+          if KeyChar = 'T' then Choice := 6;
+          if KeyChar = 'M' then Choice := 7;
+          if KeyChar in ['?', 'S', 'L', 'R', 'B', 'W', 'T', 'M'] then
             Picked := True;
-          if g_46C9 = #0 then
+          if KeyChar = #0 then
           begin
-            g_46C9 := ReadKey;
-            if (g_46C9 = KeyUp_3716) and (Sel > 0) then Dec(Sel);
-            if (g_46C9 = KeyDn_3717) and (Sel < 7) then Inc(Sel);
+            KeyChar := ReadKey;
+            if (KeyChar = ScanUp) and (Sel > 0) then Dec(Sel);
+            if (KeyChar = ScanDown) and (Sel < 7) then Inc(Sel);
           end;
         end;
-        if U2968_0077(1) or U2968_0077(2) then
+        if MouseBtnsDown(1) or MouseBtnsDown(2) then
         begin
-          MouseL := U2968_0077(1);
-          MouseR := U2968_0077(2);
-          g_4624 := U2918_022A;
-          g_4626 := U2918_0256;
-          if (g_4624 > 116) and (g_4624 < 204) then
+          MouseL := MouseBtnsDown(1);
+          MouseR := MouseBtnsDown(2);
+          TmpX := MouseX;
+          TmpY := MouseY;
+          if (TmpX > 116) and (TmpX < 204) then
           begin
-            if (g_4626 > 60) and (g_4626 <= 69) then Choice := 0
-            else if (g_4626 > 69) and (g_4626 <= 79) then Choice := 1
-            else if (g_4626 > 79) and (g_4626 <= 89) then Choice := 2
-            else if (g_4626 > 89) and (g_4626 <= 99) then Choice := 3
-            else if (g_4626 > 99) and (g_4626 <= 109) then Choice := 4
-            else if (g_4626 > 109) and (g_4626 <= 119) then Choice := 5
-            else if (g_4626 > 119) and (g_4626 <= 129) then Choice := 6
-            else if (g_4626 > 129) and (g_4626 < 142) then Choice := 7
+            if (TmpY > 60) and (TmpY <= 69) then Choice := 0
+            else if (TmpY > 69) and (TmpY <= 79) then Choice := 1
+            else if (TmpY > 79) and (TmpY <= 89) then Choice := 2
+            else if (TmpY > 89) and (TmpY <= 99) then Choice := 3
+            else if (TmpY > 99) and (TmpY <= 109) then Choice := 4
+            else if (TmpY > 109) and (TmpY <= 119) then Choice := 5
+            else if (TmpY > 119) and (TmpY <= 129) then Choice := 6
+            else if (TmpY > 129) and (TmpY < 142) then Choice := 7
             else Choice := 0;
           end
           else
             Choice := 0;
           if Choice >= 0 then
             Sel := Choice;
-          repeat until not U2968_0077(1) and not U2968_0077(2);
+          repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
         end;
       until (OldSel <> Sel) or (Choice >= 0);
-      U2968_005A;
+      HideMouseCursor;
       SetFillStyle(1, 18);
       Bar(118, 10 * OldSel + 63 - 1, 120, 10 * OldSel + 63 + 1);
       Bar(200, 10 * OldSel + 63 - 1, 202, 10 * OldSel + 63 + 1);
@@ -378,7 +378,7 @@ begin
     case Choice of
       0..7:
         begin
-          Players_3F0E[P].Name := AINames_007C[Choice];
+          Players[P].Name := AINames[Choice];
           Done := True;
         end;
     end;
@@ -390,7 +390,7 @@ end;
 
 { player setup screen: 10 boxes, choose names and keyboard / mouse /
   computer control }
-procedure U0728_5083;
+procedure PlayerSetupScreen;
 var
   X1, Y1, X2, Y2: array[1..10] of Integer;
   Color, Sel, OldSel, Choice, I, J: Integer;
@@ -398,50 +398,50 @@ var
   DivX, MultX: Integer;
 
   { draw the name field of box P }
-  {#U0728_4CD7} procedure U0728_4CD7(P: Integer);
+  {#U0728_4CD7} procedure DrawSetupBoxName(P: Integer);
   begin
     Color := 18;
-    if P > g_46B4 then
+    if P > NumPlayers then
       Color := 17;
-    U0098_028C(X1[P] + 3, Y1[P] + 3, X2[P] - 3, Y1[P] + 12, Color, 17, 15);
+    DrawPanel3D(X1[P] + 3, Y1[P] + 3, X2[P] - 3, Y1[P] + 12, Color, 17, 15);
     MultX := 100;
     DivX := MultX;
-    U26A9_01B0(100, Players_3F0E[P]);
+    SetPlayerColor(100, Players[P]);
     SetColor(P + 19);
     if Color = 17 then
       SetColor(0);
     SetTextJustify(1, 2);
     SetUserCharSize(MultX, DivX, 1, 1);
-    while TextWidth(Players_3F0E[P].Name) > 49 do
+    while TextWidth(Players[P].Name) > 49 do
     begin
       Dec(MultX);
       SetUserCharSize(MultX, DivX, 1, 1);
     end;
-    OutTextXY((X1[P] + X2[P]) div 2, Y1[P] + 1, Players_3F0E[P].Name);
+    OutTextXY((X1[P] + X2[P]) div 2, Y1[P] + 1, Players[P].Name);
   end;
 
   { draw the KEYBOARD / MOUSE / COMPUTER selector of box P }
-  {#U0728_4E65} procedure U0728_4E65(P: Integer);
+  {#U0728_4E65} procedure DrawSetupBoxControl(P: Integer);
   begin
-    if P > g_46B4 then
-      Control_E480[P] := 0;
+    if P > NumPlayers then
+      Controls[P] := 0;
     SetUserCharSize(1, 1, 1, 1);
     SetTextJustify(1, 1);
-    if Control_E480[P] = 1 then SetColor(9) else SetColor(0);
+    if Controls[P] = 1 then SetColor(9) else SetColor(0);
     OutTextXY((X1[P] + X2[P]) div 2, Y1[P] + 19, 'KEYBOARD');
-    if Control_E480[P] = 2 then SetColor(9) else SetColor(0);
-    if g_E78B = 0 then
+    if Controls[P] = 2 then SetColor(9) else SetColor(0);
+    if MouseIn = 0 then
       SetUserCharSize(1, 1, 1, 3);
     OutTextXY((X1[P] + X2[P]) div 2, Y1[P] + 19 + 10, 'MOUSE');
     SetUserCharSize(1, 1, 1, 1);
-    if Control_E480[P] = 3 then SetColor(9) else SetColor(0);
+    if Controls[P] = 3 then SetColor(9) else SetColor(0);
     OutTextXY((X1[P] + X2[P]) div 2, Y1[P] + 19 + 10 + 10, 'COMPUTER');
   end;
 
 { marker here (not above the header): the nested procedures come first in the code }
 {#U0728_5083}
 begin
-  U0728_07CE;
+  DrawStartButton;
   X1[1] := 10;
   X2[1] := 65;
   Y1[1] := 50;
@@ -467,18 +467,18 @@ begin
   for I := 1 to 10 do
   begin
     Color := 18;
-    if I > g_46B4 then
+    if I > NumPlayers then
       Color := 17;
-    U0098_028C(X1[I], Y1[I], X2[I], Y2[I], Color, 15, 17);
+    DrawPanel3D(X1[I], Y1[I], X2[I], Y2[I], Color, 15, 17);
     SetColor(5);
     SetTextJustify(1, 2);
-    U0728_4CD7(I);
-    U0728_4E65(I);
-    U0098_03F4((X1[I] + X2[I]) div 2, Y2[I] - 4, SaveBuf_E496);
+    DrawSetupBoxName(I);
+    DrawSetupBoxControl(I);
+    ErasePlusMark((X1[I] + X2[I]) div 2, Y2[I] - 4, SaveBuf);
     if Color = 17 then
     begin
-      U2823_017D((X1[I] + X2[I]) div 2, Y2[I] - 4, 1, 1, 0);
-      U2823_0BB6((X1[I] + X2[I]) div 2, Y2[I] - 4, 0);
+      DrawEllipseNoClip((X1[I] + X2[I]) div 2, Y2[I] - 4, 1, 1, 0);
+      PlotPixel((X1[I] + X2[I]) div 2, Y2[I] - 4, 0);
     end;
   end;
   Sel := 0;
@@ -491,99 +491,99 @@ begin
     MouseF := MouseL;
     NameF := MouseL;
     repeat
-      U0098_03A8((X1[Sel + 1] + X2[Sel + 1]) div 2, Y2[Sel + 1] - 4);
-      U2968_004D;
+      DrawPlusMark((X1[Sel + 1] + X2[Sel + 1]) div 2, Y2[Sel + 1] - 4);
+      ShowMouseCursor;
       OldSel := Sel;
       repeat
         if KeyPressed then
         begin
-          g_46C9 := UpCase(ReadKey);
-          if g_46C9 in [#13, ' '] then
+          KeyChar := UpCase(ReadKey);
+          if KeyChar in [#13, ' '] then
           begin
             Choice := Sel;
             NameF := True;
           end;
-          if g_46C9 = 'K' then
+          if KeyChar = 'K' then
           begin
             Choice := Sel;
             KeyF := True;
             MouseF := False;
           end;
-          if g_46C9 = 'M' then
+          if KeyChar = 'M' then
           begin
             Choice := Sel;
             MouseF := True;
             KeyF := False;
           end;
-          if g_46C9 = 'C' then
+          if KeyChar = 'C' then
           begin
             Choice := Sel;
             MouseF := True;
             KeyF := True;
           end;
-          if g_46C9 in [#27, 'G', 'P', 'S'] then
+          if KeyChar in [#27, 'G', 'P', 'S'] then
             Choice := 10;
-          if g_46C9 = #0 then
+          if KeyChar = #0 then
           begin
-            g_46C9 := ReadKey;
-            if g_46C9 = KeyLt_3719 then
+            KeyChar := ReadKey;
+            if KeyChar = ScanLeft then
             begin
               Dec(Sel);
-              if Sel = -1 then Sel := g_46B4 - 1;
+              if Sel = -1 then Sel := NumPlayers - 1;
             end;
-            if g_46C9 = KeyRt_3718 then
+            if KeyChar = ScanRight then
             begin
               Inc(Sel);
-              if Sel = g_46B4 then Sel := 0;
+              if Sel = NumPlayers then Sel := 0;
             end;
-            if g_46C9 = KeyUp_3716 then
+            if KeyChar = ScanUp then
             begin
               Dec(Sel, 5);
               if Sel < 0 then Inc(Sel, 10);
-              if Sel >= g_46B4 then Dec(Sel, 5);
+              if Sel >= NumPlayers then Dec(Sel, 5);
             end;
-            if g_46C9 = KeyDn_3717 then
+            if KeyChar = ScanDown then
             begin
               Inc(Sel, 5);
               if Sel > 9 then Dec(Sel, 10);
-              if Sel >= g_46B4 then Dec(Sel, 5);
+              if Sel >= NumPlayers then Dec(Sel, 5);
             end;
           end;
         end;
-        if U2968_0077(1) or U2968_0077(2) then
+        if MouseBtnsDown(1) or MouseBtnsDown(2) then
         begin
-          MouseL := U2968_0077(1);
-          MouseR := U2968_0077(2);
-          g_4624 := U2918_022A;
-          g_4626 := U2918_0256;
-          for I := 1 to g_46B4 do
+          MouseL := MouseBtnsDown(1);
+          MouseR := MouseBtnsDown(2);
+          TmpX := MouseX;
+          TmpY := MouseY;
+          for I := 1 to NumPlayers do
           begin
-            if (g_4624 > X1[I]) and (g_4624 < X2[I]) and
-               (g_4626 > Y1[I]) and (g_4626 < Y2[I]) then
+            if (TmpX > X1[I]) and (TmpX < X2[I]) and
+               (TmpY > Y1[I]) and (TmpY < Y2[I]) then
               Sel := I - 1;
-            if (X1[I] + 3 < g_4624) and (Y1[I] + 3 < g_4626) and
-               (X2[I] - 3 > g_4624) and (Y1[I] + 12 > g_4626) then
+            if (X1[I] + 3 < TmpX) and (Y1[I] + 3 < TmpY) and
+               (X2[I] - 3 > TmpX) and (Y1[I] + 12 > TmpY) then
             begin
               NameF := True;
               Sel := I - 1;
               Choice := I - 1;
             end;
-            if (g_4624 > X1[I]) and (g_4624 < X2[I]) and
-               (Y1[I] + 15 < g_4626) and (Y1[I] + 15 + 10 > g_4626) then
+            if (TmpX > X1[I]) and (TmpX < X2[I]) and
+               (Y1[I] + 15 < TmpY) and (Y1[I] + 15 + 10 > TmpY) then
             begin
               KeyF := True;
               Sel := I - 1;
               Choice := I - 1;
             end;
-            if (g_4624 > X1[I]) and (g_4624 < X2[I]) and
-               (Y1[I] + 15 + 10 < g_4626) and (Y1[I] + 15 + 20 > g_4626) then
+            if (TmpX > X1[I]) and (TmpX < X2[I]) and
+               (Y1[I] + 15 + 10 < TmpY) and (Y1[I] + 15 + 20 > TmpY) then
             begin
               MouseF := True;
               Sel := I - 1;
               Choice := I - 1;
             end;
-            if (g_4624 > X1[I]) and (g_4624 < X2[I]) and
-               (Y1[I] + 15 + 20 < g_4626) and (Y1[I] + 15 + 30 > g_4626) then
+            if (TmpX > X1[I]) and (TmpX < X2[I]) and
+               (Y1[I] + 15 + 20 < TmpY) and (Y1[I] + 15 + 30 > TmpY) then
             begin
               MouseF := True;
               KeyF := True;
@@ -591,57 +591,57 @@ begin
               Choice := I - 1;
             end;
           end;
-          if (g_4624 > 71) and (g_4624 < 249) and (g_4626 > 171) and (g_4626 < 197) then
+          if (TmpX > 71) and (TmpX < 249) and (TmpY > 171) and (TmpY < 197) then
             Choice := 10;
         end;
       until (OldSel <> Sel) or (Choice >= 0);
-      U2968_005A;
-      U0098_03F4((X1[OldSel + 1] + X2[OldSel + 1]) div 2, Y2[OldSel + 1] - 4, SaveBuf_E496);
+      HideMouseCursor;
+      ErasePlusMark((X1[OldSel + 1] + X2[OldSel + 1]) div 2, Y2[OldSel + 1] - 4, SaveBuf);
     until Choice in [0..10];
     SetColor(14);
     SetFillStyle(1, 18);
     case Choice of
       0..9:
         begin
-          if NameF and (Control_E480[Choice + 1] in [1, 2]) then
+          if NameF and (Controls[Choice + 1] in [1, 2]) then
           begin
-            U0728_4183(Choice + 1);
-            U0728_4CD7(Choice + 1);
+            EditPlayerName(Choice + 1);
+            DrawSetupBoxName(Choice + 1);
           end;
-          if NameF and (Control_E480[Choice + 1] = 3) then
+          if NameF and (Controls[Choice + 1] = 3) then
           begin
-            U0728_46AC(Choice + 1);
-            U0728_4CD7(Choice + 1);
+            SelectAIType(Choice + 1);
+            DrawSetupBoxName(Choice + 1);
           end;
           if KeyF and not MouseF then
           begin
-            J := Control_E480[Choice + 1];
-            Control_E480[Choice + 1] := 1;
-            U0728_4E65(Choice + 1);
+            J := Controls[Choice + 1];
+            Controls[Choice + 1] := 1;
+            DrawSetupBoxControl(Choice + 1);
             if J = 3 then
             begin
-              U0728_4183(Choice + 1);
-              U0728_4CD7(Choice + 1);
+              EditPlayerName(Choice + 1);
+              DrawSetupBoxName(Choice + 1);
             end;
           end;
           if MouseF and not KeyF then
           begin
-            J := Control_E480[Choice + 1];
-            Control_E480[Choice + 1] := 2;
-            U0728_4E65(Choice + 1);
+            J := Controls[Choice + 1];
+            Controls[Choice + 1] := 2;
+            DrawSetupBoxControl(Choice + 1);
             if J = 3 then
             begin
-              U0728_4183(Choice + 1);
-              U0728_4CD7(Choice + 1);
+              EditPlayerName(Choice + 1);
+              DrawSetupBoxName(Choice + 1);
             end;
           end;
           if MouseF and KeyF then
           begin
-            J := Control_E480[Choice + 1];
-            Control_E480[Choice + 1] := 3;
-            U0728_4E65(Choice + 1);
-            U0728_46AC(Choice + 1);
-            U0728_4CD7(Choice + 1);
+            J := Controls[Choice + 1];
+            Controls[Choice + 1] := 3;
+            DrawSetupBoxControl(Choice + 1);
+            SelectAIType(Choice + 1);
+            DrawSetupBoxName(Choice + 1);
           end;
         end;
       10:
@@ -649,27 +649,27 @@ begin
     end;
     Choice := -1;
   until Done;
-  g_46EC := 1;
-  FillChar(Tanks_3EE2, 44, 0);
-  for I := 1 to g_46B4 do
+  AllComputers := 1;
+  FillChar(Tanks, 44, 0);
+  for I := 1 to NumPlayers do
   begin
-    if (Control_E480[I] = 3) and (Players_3F0E[I].Name = 'Random') then
-      Players_3F0E[I].Name := AINames_007C[Random(7) + 1];
-    U0728_0078(I);
-    if Control_E480[I] <> 3 then
-      g_46EC := 0;
+    if (Controls[I] = 3) and (Players[I].Name = 'Random') then
+      Players[I].Name := AINames[Random(7) + 1];
+    CreateAIPlayer(I);
+    if Controls[I] <> 3 then
+      AllComputers := 0;
   end;
-  repeat until not U2968_0077(1) and not U2968_0077(2);
-  for g_4624 := 0 to 319 do
-    U2823_0AC0(0, 199, g_4624, 0, SaveBuf_E496);
-  for g_4626 := 0 to 199 do
-    U2823_0AC0(0, 199, 319, g_4626, SaveBuf_E496);
+  repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
+  for TmpX := 0 to 319 do
+    CopyLine(0, 199, TmpX, 0, SaveBuf);
+  for TmpY := 0 to 199 do
+    CopyLine(0, 199, 319, TmpY, SaveBuf);
 end;
 
 { program setup: defaults, read BOMB.CFG, parse the command line
   (H = help screen, DEBUG = show the current parameters) }
 {#U0728_62E4}
-procedure U0728_62E4;
+procedure LoadSettings;
 var
   I: Integer;
   Unused03: Byte;                   { unused locals keep the frame layout }
@@ -678,39 +678,39 @@ var
   UnusedAF: Byte;
   Sig: string[4];                   { BOMB.CFG signature }
 begin
-  g_4654 := 0;
-  g_E788 := 1;
-  g_E787 := 0;
-  g_E77A := 10;
-  g_E780 := 0;
-  g_46BC := 1;
-  g_E789 := 0;
-  g_E78A := 0;
-  g_E77C := 10;
-  g_E78D := 1;
-  g_46B4 := 2;
-  g_E78F := 1;
-  g_E782 := 0;
-  g_E77E := 2;
-  SaveName_46FC := 'QWERTYUI';
-  g_46F0 := 0;
-  g_46F1 := 0;
-  g_46F2 := 0;
-  g_E794 := 0;
-  g_46EC := 1;
-  g_E78B := 0;
-  g_E790 := 0;
-  g_E792 := 1;
-  g_E78E := 1;
-  g_E79E := 0;
-  g_E786 := 1;
-  g_E78C := 0;
-  g_E791 := 0;
-  g_E793 := 1;
-  g_E79C := 0;
-  g_E798 := 0;
-  g_E79A := 0;
-  g_E796 := 0;
+  ShowHelp := 0;
+  SoundOn := 1;
+  FlySound := 0;
+  CrumblePct := 10;
+  WallControl := 0;
+  GameNo := 1;
+  InvisoBall := 0;
+  ShotTrail := 0;
+  GamesToPlay := 10;
+  TanksFall := 1;
+  NumPlayers := 2;
+  CompuBuy := 1;
+  BackControl := 0;
+  WindControl := 2;
+  SaveName := 'QWERTYUI';
+  SaveRequested := 0;
+  LoadRequested := 0;
+  AutoSave := 0;
+  BeginnerGame := 0;
+  AllComputers := 1;
+  MouseIn := 0;
+  ForceMouse := 0;
+  DirectPorts := 1;
+  ShowTitle := 1;
+  ShotSpeed := 0;
+  PaletteOn := 1;
+  CrudeVideo := 0;
+  TeamPlay := 0;
+  PalUseRetrace := 1;
+  FallSpeed := 0;
+  TurretSpeed := 0;
+  ExplodeSpeed := 0;
+  PalSpeed := 0;
   FindFirst('BOMB.CFG', AnyFile, SR);
   if DosError = 0 then
   begin
@@ -718,37 +718,37 @@ begin
     Reset(F, 1);
     Sig := 'BADx';
     BlockRead(F, Sig, 5);
-    if Sig <> Version_0056 then
+    if Sig <> GameVersion then
     begin
       TextMode(3);
       Writeln('An invalid BOMB.CFG has been found.');
       Writeln('Please run BOMBCFG to correct the situation.');
       Halt(1);
     end;
-    BlockRead(F, g_E788, 1);
-    BlockRead(F, g_E787, 1);
-    BlockRead(F, g_E77E, 2);
-    BlockRead(F, g_E77A, 2);
-    BlockRead(F, g_E780, 2);
-    BlockRead(F, g_E789, 1);
-    BlockRead(F, g_E78A, 1);
-    BlockRead(F, g_E77C, 2);
-    BlockRead(F, g_E78D, 1);
-    BlockRead(F, g_E782, 2);
-    BlockRead(F, g_E784, 2);
-    BlockRead(F, g_E790, 1);
-    BlockRead(F, g_E78B, 1);
-    BlockRead(F, g_E792, 1);
-    BlockRead(F, g_E786, 1);
-    BlockRead(F, g_E78C, 1);
-    BlockRead(F, g_E796, 2);
-    BlockRead(F, g_E78F, 1);
-    BlockRead(F, g_E798, 2);
-    BlockRead(F, g_E79C, 2);
-    BlockRead(F, g_E79A, 2);
-    BlockRead(F, g_E79E, 2);
-    BlockRead(F, g_E793, 1);
-    BlockRead(F, g_E791, 1);
+    BlockRead(F, SoundOn, 1);
+    BlockRead(F, FlySound, 1);
+    BlockRead(F, WindControl, 2);
+    BlockRead(F, CrumblePct, 2);
+    BlockRead(F, WallControl, 2);
+    BlockRead(F, InvisoBall, 1);
+    BlockRead(F, ShotTrail, 1);
+    BlockRead(F, GamesToPlay, 2);
+    BlockRead(F, TanksFall, 1);
+    BlockRead(F, BackControl, 2);
+    BlockRead(F, BackMask, 2);
+    BlockRead(F, ForceMouse, 1);
+    BlockRead(F, MouseIn, 1);
+    BlockRead(F, DirectPorts, 1);
+    BlockRead(F, PaletteOn, 1);
+    BlockRead(F, CrudeVideo, 1);
+    BlockRead(F, PalSpeed, 2);
+    BlockRead(F, CompuBuy, 1);
+    BlockRead(F, TurretSpeed, 2);
+    BlockRead(F, FallSpeed, 2);
+    BlockRead(F, ExplodeSpeed, 2);
+    BlockRead(F, ShotSpeed, 2);
+    BlockRead(F, PalUseRetrace, 1);
+    BlockRead(F, TeamPlay, 1);
     Close(F);
   end
   else
@@ -762,86 +762,86 @@ begin
   if ParamCount > 0 then
     for I := 1 to ParamCount do
     begin
-      g_46CA := U2918_0337(ParamStr(I));
-      if g_46CA[1] in ['/', '\'] then
-        Delete(g_46CA, 1, 1);
-      if g_46CA = 'H' then g_4654 := 1;
-      if g_46CA = 'S-' then g_E788 := 0;
-      if g_46CA = 'S+' then g_E788 := 1;
-      if g_46CA = 'F+' then g_E787 := 1;
-      if g_46CA = 'F-' then g_E787 := 0;
-      if g_46CA[1] = 'G' then
-        Val(Copy(g_46CA, 2, 3), g_E77C, g_4620);
-      if (Copy(g_46CA, 1, 2) = 'BK') and (g_46CA[3] >= 'A') and (g_46CA[3] < 'I') then
-        g_E782 := Ord(g_46CA[3]) - 64;
-      if (g_46CA = 'BK-') or (g_46CA = 'BKN') then g_E782 := 0;
-      if (g_46CA = 'BK+') or (g_46CA = 'BKR') then g_E782 := 9;
-      if g_46CA = 'BKU' then g_E782 := 10;
-      if g_46CA[1] = 'W' then
-        Val(Copy(g_46CA, 2, 1), g_E77E, g_4620);
-      g_E77E := g_E77E mod 6;
-      if g_46CA[1] = 'R' then
-        Val(Copy(g_46CA, 2, 1), g_E780, g_4620);
-      g_E780 := g_E780 mod 6;
-      if g_46CA = 'R+' then g_E780 := 2;
-      if g_46CA = 'RR' then g_E780 := 5;
-      if g_46CA = 'R-' then g_E780 := 0;
-      if g_46CA[1] = 'C' then
-        Val(Copy(g_46CA, 2, 3), g_E77A, g_4620);
-      if g_46CA = 'C+' then g_E77A := 100;
-      if g_46CA = 'C-' then g_E77A := 0;
-      if g_46CA = 'I+' then g_E789 := 1;
-      if g_46CA = 'I-' then g_E789 := 0;
-      if g_46CA = 'T+' then g_E78A := 1;
-      if g_46CA = 'T-' then g_E78A := 0;
-      if g_46CA = 'D-' then g_E78D := 0;
-      if g_46CA = 'D+' then g_E78D := 1;
-      if Copy(g_46CA, 0, 4) = 'TEAM' then g_E791 := 1;
-      if g_46CA = 'B-' then g_E78F := 0;
-      if g_46CA = 'B+' then g_E78F := 1;
-      if Copy(g_46CA, 1, 2) = 'TS' then
-        Val(Copy(g_46CA, 3, 3), g_E798, g_4620);
-      if Copy(g_46CA, 1, 2) = 'FS' then
-        Val(Copy(g_46CA, 3, 3), g_E79C, g_4620);
-      if Copy(g_46CA, 1, 2) = 'ES' then
-        Val(Copy(g_46CA, 3, 3), g_E79A, g_4620);
-      if Copy(g_46CA, 1, 2) = 'SS' then
-        Val(Copy(g_46CA, 3, 3), g_E79E, g_4620);
-      if g_46CA = 'M-' then
+      TmpStr := UpperStr(ParamStr(I));
+      if TmpStr[1] in ['/', '\'] then
+        Delete(TmpStr, 1, 1);
+      if TmpStr = 'H' then ShowHelp := 1;
+      if TmpStr = 'S-' then SoundOn := 0;
+      if TmpStr = 'S+' then SoundOn := 1;
+      if TmpStr = 'F+' then FlySound := 1;
+      if TmpStr = 'F-' then FlySound := 0;
+      if TmpStr[1] = 'G' then
+        Val(Copy(TmpStr, 2, 3), GamesToPlay, LoopJ);
+      if (Copy(TmpStr, 1, 2) = 'BK') and (TmpStr[3] >= 'A') and (TmpStr[3] < 'I') then
+        BackControl := Ord(TmpStr[3]) - 64;
+      if (TmpStr = 'BK-') or (TmpStr = 'BKN') then BackControl := 0;
+      if (TmpStr = 'BK+') or (TmpStr = 'BKR') then BackControl := 9;
+      if TmpStr = 'BKU' then BackControl := 10;
+      if TmpStr[1] = 'W' then
+        Val(Copy(TmpStr, 2, 1), WindControl, LoopJ);
+      WindControl := WindControl mod 6;
+      if TmpStr[1] = 'R' then
+        Val(Copy(TmpStr, 2, 1), WallControl, LoopJ);
+      WallControl := WallControl mod 6;
+      if TmpStr = 'R+' then WallControl := 2;
+      if TmpStr = 'RR' then WallControl := 5;
+      if TmpStr = 'R-' then WallControl := 0;
+      if TmpStr[1] = 'C' then
+        Val(Copy(TmpStr, 2, 3), CrumblePct, LoopJ);
+      if TmpStr = 'C+' then CrumblePct := 100;
+      if TmpStr = 'C-' then CrumblePct := 0;
+      if TmpStr = 'I+' then InvisoBall := 1;
+      if TmpStr = 'I-' then InvisoBall := 0;
+      if TmpStr = 'T+' then ShotTrail := 1;
+      if TmpStr = 'T-' then ShotTrail := 0;
+      if TmpStr = 'D-' then TanksFall := 0;
+      if TmpStr = 'D+' then TanksFall := 1;
+      if Copy(TmpStr, 0, 4) = 'TEAM' then TeamPlay := 1;
+      if TmpStr = 'B-' then CompuBuy := 0;
+      if TmpStr = 'B+' then CompuBuy := 1;
+      if Copy(TmpStr, 1, 2) = 'TS' then
+        Val(Copy(TmpStr, 3, 3), TurretSpeed, LoopJ);
+      if Copy(TmpStr, 1, 2) = 'FS' then
+        Val(Copy(TmpStr, 3, 3), FallSpeed, LoopJ);
+      if Copy(TmpStr, 1, 2) = 'ES' then
+        Val(Copy(TmpStr, 3, 3), ExplodeSpeed, LoopJ);
+      if Copy(TmpStr, 1, 2) = 'SS' then
+        Val(Copy(TmpStr, 3, 3), ShotSpeed, LoopJ);
+      if TmpStr = 'M-' then
       begin
-        g_E78B := 0;
-        g_E790 := 1;
+        MouseIn := 0;
+        ForceMouse := 1;
       end;
-      if g_46CA = 'M+' then
+      if TmpStr = 'M+' then
       begin
-        g_E78B := 1;
-        g_E790 := 1;
+        MouseIn := 1;
+        ForceMouse := 1;
       end;
-      if g_46CA = 'H-' then g_E792 := 0;
-      if g_46CA = 'H+' then g_E792 := 1;
-      if g_46CA = 'DV+' then g_E792 := 1;
-      if g_46CA = 'DV-' then g_E792 := 0;
-      if g_46CA = 'CV+' then g_E78C := 1;
-      if g_46CA = 'CV-' then g_E78C := 0;
-      if g_46CA = 'CRUDE' then g_E78C := 1;
-      if g_46CA = 'NOCRUDE' then g_E78C := 0;
-      if g_46CA = 'P-' then g_E786 := 0;
-      if g_46CA = 'P+' then g_E786 := 1;
-      if g_46CA = 'PV' then
+      if TmpStr = 'H-' then DirectPorts := 0;
+      if TmpStr = 'H+' then DirectPorts := 1;
+      if TmpStr = 'DV+' then DirectPorts := 1;
+      if TmpStr = 'DV-' then DirectPorts := 0;
+      if TmpStr = 'CV+' then CrudeVideo := 1;
+      if TmpStr = 'CV-' then CrudeVideo := 0;
+      if TmpStr = 'CRUDE' then CrudeVideo := 1;
+      if TmpStr = 'NOCRUDE' then CrudeVideo := 0;
+      if TmpStr = 'P-' then PaletteOn := 0;
+      if TmpStr = 'P+' then PaletteOn := 1;
+      if TmpStr = 'PV' then
       begin
-        g_E786 := 1;
-        g_E793 := 1;
+        PaletteOn := 1;
+        PalUseRetrace := 1;
       end;
-      if g_46CA = 'PT' then
+      if TmpStr = 'PT' then
       begin
-        g_E786 := 1;
-        g_E793 := 0;
+        PaletteOn := 1;
+        PalUseRetrace := 0;
       end;
-      if g_46CA = 'SKIP' then g_E78E := 0;
-      if g_46CA = 'NEW' then g_E794 := 1;
-      if g_46CA = 'DEBUG' then g_E795 := 1;
+      if TmpStr = 'SKIP' then ShowTitle := 0;
+      if TmpStr = 'NEW' then BeginnerGame := 1;
+      if TmpStr = 'DEBUG' then DebugMode := 1;
     end;
-  if g_4654 <> 0 then
+  if ShowHelp <> 0 then
   begin
     Writeln('Tank Wars Command Line Parameters:');
     Writeln('Game Options:');
@@ -866,60 +866,60 @@ begin
     Writeln('  PSnn  Projectile Speed                SSnn  Shot Speed');
     Halt;
   end;
-  U2823_0DCF(g_4656, g_E792, g_E78C);
-  if g_E795 <> 0 then
+  SelectDacRoutines(CpuKind, DirectPorts, CrudeVideo);
+  if DebugMode <> 0 then
   begin
     ClrScr;
     TextColor(10);
     Writeln('  Current Parameters:');
     TextColor(13); Write('Effsound............................:');
-    TextColor(14); Writeln(Boolean(g_E788));
+    TextColor(14); Writeln(Boolean(SoundOn));
     TextColor(13); Write('Flysound............................:');
-    TextColor(14); Writeln(Boolean(g_E787));
+    TextColor(14); Writeln(Boolean(FlySound));
     TextColor(13); Write('WindControl.........................:');
-    TextColor(14); Writeln(g_E77E);
+    TextColor(14); Writeln(WindControl);
     TextColor(13); Write('Crumbper............................:');
-    TextColor(14); Writeln(g_E77A);
+    TextColor(14); Writeln(CrumblePct);
     TextColor(13); Write('Wallcontrol.........................:');
-    TextColor(14); Writeln(g_E780);
+    TextColor(14); Writeln(WallControl);
     TextColor(13); Write('Inviso..............................:');
-    TextColor(14); Writeln(Boolean(g_E789));
+    TextColor(14); Writeln(Boolean(InvisoBall));
     TextColor(13); Write('Trail...............................:');
-    TextColor(14); Writeln(Boolean(g_E78A));
+    TextColor(14); Writeln(Boolean(ShotTrail));
     TextColor(13); Write('GamesToPlay.........................:');
-    TextColor(14); Writeln(g_E77C);
+    TextColor(14); Writeln(GamesToPlay);
     TextColor(13); Write('FallDown............................:');
-    TextColor(14); Writeln(Boolean(g_E78D));
+    TextColor(14); Writeln(Boolean(TanksFall));
     TextColor(13); Write('BackControl.........................:');
-    TextColor(14); Writeln(g_E782);
+    TextColor(14); Writeln(BackControl);
     TextColor(13); Write('ForceMouse..........................:');
-    TextColor(14); Writeln(Boolean(g_E790));
+    TextColor(14); Writeln(Boolean(ForceMouse));
     TextColor(13); Write('Mousein.............................:');
-    TextColor(14); Writeln(Boolean(g_E78B));
+    TextColor(14); Writeln(Boolean(MouseIn));
     TextColor(13); Write('Fastpal.............................:');
-    TextColor(14); Writeln(Boolean(g_E792));
+    TextColor(14); Writeln(Boolean(DirectPorts));
     TextColor(13); Write('CrudeCycle..........................:');
-    TextColor(14); Writeln(Boolean(g_E78C));
+    TextColor(14); Writeln(Boolean(CrudeVideo));
     TextColor(13); Write('Palette.............................:');
-    TextColor(14); Writeln(Boolean(g_E786));
+    TextColor(14); Writeln(Boolean(PaletteOn));
     TextColor(13); Write('Pspeed..............................:');
-    TextColor(14); Writeln(g_E796);
+    TextColor(14); Writeln(PalSpeed);
     TextColor(13); Write('CompuBuy............................:');
-    TextColor(14); Writeln(Boolean(g_E78F));
-    U2918_01A1;
+    TextColor(14); Writeln(Boolean(CompuBuy));
+    WaitKeyOrMouse;
     ClrScr;
     TextColor(10);
     Writeln('  Current Parameters:');
     TextColor(13); Write('TurretSpeed.........................:');
-    TextColor(14); Writeln(g_E798);
+    TextColor(14); Writeln(TurretSpeed);
     TextColor(13); Write('FallSpeed...........................:');
-    TextColor(14); Writeln(g_E79C);
+    TextColor(14); Writeln(FallSpeed);
     TextColor(13); Write('ExplodeSpeed........................:');
-    TextColor(14); Writeln(g_E79A);
+    TextColor(14); Writeln(ExplodeSpeed);
     TextColor(13); Write('ShotSpeed...........................:');
-    TextColor(14); Writeln(g_E79E);
+    TextColor(14); Writeln(ShotSpeed);
     TextColor(13); Write('CPU.................................:');
-    TextColor(14); Writeln(g_4656);
+    TextColor(14); Writeln(CpuKind);
     TextColor(13); Write('Range Checking...$R.................:');
     TextColor(14); Writeln('OFF');
     TextColor(13); Write('Stack Checking...$S.................:');
@@ -935,9 +935,9 @@ begin
     TextColor(13); Write('Overlay Configuration...............:');
     TextColor(14); Writeln('OFF');
     TextColor(13); Write('Video Interrupt.....................:');
-    TextColor(14); Writeln(Boolean(g_E793));
+    TextColor(14); Writeln(Boolean(PalUseRetrace));
     TextColor(13); Write('Team Play...........................:');
-    TextColor(14); Writeln(Boolean(g_E791));
-    U2918_01A1;
+    TextColor(14); Writeln(Boolean(TeamPlay));
+    WaitKeyOrMouse;
   end;
 end;

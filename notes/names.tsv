@@ -1,0 +1,451 @@
+# placeholder name (unit+entry offset / DS offset) -> source identifier -> note
+U0040_0014	ShowTitleScreen	shows BOMB1/BOMB2.RAW title picture, palette cycle
+U0098_0000	DisableHotKeys	clears hot-key handler enable flag
+U0098_0006	EnableHotKeys	sets hot-key handler enable flag
+U0098_0010	RandomizeBackColors	Ctrl-R: random fade in DAC 30..59
+U0098_01BD	InitPanelGreys	sets DAC 17..19 greys, line style, draw seg
+U0098_0226	DebugTrace	prints message and waits for key
+U0098_028C	DrawPanel3D	filled bar with 2-pixel bevel
+U0098_03A8	DrawPlusMark	small '+' marker (colour 19) in VGA memory
+U0098_03F4	ErasePlusMark	restores '+' marker pixels from buffer
+U0098_0455	CopyColorPixels	copy pixels of one colour Src->Dst
+U0098_047B	DropDirt	falling dirt (colour 2) simulation
+U0098_0552	PlotScreenAndBuf	pixel to screen and buffer
+U0098_0579	RestoreColorRange	restore screen pixels in colour range Lo..Hi
+U0098_05A9	RestoreColorPixels	restore screen pixels of one colour
+U0098_05D2	DrawTankBody	tank dome at X,Y direct to VGA
+U0098_066A	EraseTankBody	restore tank dome pixels from buffer
+U0098_07A3	DrawTank	tank body + turret if alive
+U0098_08C2	EraseTank	erase tank body + turret from back buffer
+U0098_09B2	AbortKeysDown	both shifts or both mouse buttons pressed
+U0098_09ED	KillAllTanks	clears alive flag of all players
+U0098_0A58	MassKillDialog	Ctrl-M Y/N confirmation
+U0098_0C03	QuitToDos	close graph, 'Game Aborted', Halt
+U0098_0C63	QuitDialog	Ctrl-Q Y/N confirmation
+U0098_0ED2	ShowGameStatus	Ctrl-P game status / pause screen
+U0098_18B2	ShowControlList	F1 control list help screen
+U0728_0007	YesNoStr	'YES'/'NO'
+U0728_0043	OnOffStr	'ON'/'OFF'
+U0728_0078	CreateAIPlayer	New AI object by player name
+U0728_0216	ResetPlayer	reset player I to defaults
+U0728_04D0	CheckMouse	'Checking for mouse' message + detect
+U0728_05D8	ShowCpuType	CPU detection message
+U0728_06B1	InitMouseCursor	mouse reset + set cursor shape
+U0728_06D1	DrawTitleBox	'TANK WARS' title box
+U0728_07CE	DrawStartButton	START button
+U0728_08E6	DrawMainMenuHeader	'Main Menu' header
+U0728_09B5	SoundOptionsDialog	Effect/Flying ON/OFF box (Sound Options)
+U0728_0DEF	BackgroundName	background type name string
+U0728_0F3B	WallTypeName	wall type name string
+U0728_0FFC	WindForceName	wind force name string
+U0728_1186	GameOptionsDialog	'Game Options' box with 10 settings
+U0728_1DD5	RunMainMenu	main menu loop (options, players, games, START, Load)
+U0728_2609	TeamSetupScreen	assign players to teams
+U0728_2D41	DrawTeamNameCursor	nested in EditTeamName: draw block cursor
+U0728_2E8E	HideTeamNameCursor	nested in EditTeamName: remove cursor
+U0728_302C	EditTeamName	edit team T name dialog
+U0728_3449	BuildTeams	build team table, name teams
+U0728_3A10	DrawMenuBackground	background palette + pattern for menus
+U0728_3BC3	SetupGame	main setup driver: beginner defaults or menus
+U0728_3EA1	DrawPlayerNameCursor	nested in EditPlayerName: draw block cursor
+U0728_3FEE	HidePlayerNameCursor	nested in EditPlayerName: remove cursor
+U0728_4183	EditPlayerName	edit player P name dialog
+U0728_46AC	SelectAIType	pick computer player type for P
+U0728_4CD7	DrawSetupBoxName	nested in PlayerSetupScreen: name field of box
+U0728_4E65	DrawSetupBoxControl	nested: KEYBOARD/MOUSE/COMPUTER selector
+U0728_5083	PlayerSetupScreen	10 player boxes: names and control type
+U0728_62E4	LoadSettings	defaults, read BOMB.CFG, parse command line
+U0E9B_0000	SwapPlayers	swaps player record, tank object, control
+U0E9B_015B	DrawShopButtons	builds/draws shop item buttons
+U0E9B_0E1F	RunShop	shop loop for all players (kbd/mouse/AI)
+U0E9B_23EF	ShufflePlayers	random swaps of player order
+U0E9B_24E4	ShowPlayerStats	player statistics window
+U0E9B_2B8E	ShowTeamStats	team statistics window
+U0E9B_369F	EditSaveName	input box for save file name
+U0E9B_33D2	DrawNameCursor	nested: draw cursor in name box
+U0E9B_3512	EraseNameCursor	nested: remove cursor in name box
+U0E9B_39EA	SaveGame	writes FileName.TWS
+U0E9B_3E7A	LoadGame	reads FileName.TWS, recreates AI objects
+U0E9B_455E	SaveGameDialog	Save/Autosave/Save&Quit/New Name/Cancel
+U0E9B_4B93	LoadGameDialog	lists *.TWS, pick one and load
+U0E9B_54C6	AddGamesDialog	"# TO ADD:" box, adds to games count
+U0E9B_51F2	DrawAddCursor	nested: draw cursor in add box
+U0E9B_5336	EraseAddCursor	nested: erase cursor in add box
+U0E9B_5893	ShowStandings	end-of-round player standings screen
+U0E9B_63ED	ShowTeamStandings	end-of-round team standings screen
+U0E9B_7242	PrintFinalResults	text-mode final results
+U0E9B_7523	PlayGames	main game loop over all games/rounds
+U1615_0000	UpdateWeaponLamps	weapon/accessory indicator colours
+U1615_0209	FireShell	flies a normal shell (magnet, guidance, walls)
+U1615_14AE	FireMirv	MIRV setup menus + 5-way split flight
+U1615_3550	FireLaser	laser beam shot
+U1615_46C2	PlayRound	one round: wind, turns until one team left
+U1B27_0000	FlashRandomColor	palette entry from random low-memory bytes
+U1B27_0047	TankDeathNuke	death anim: fireballs + mushroom ("nuke")
+U1B27_09EF	AnimDebrisPaths	debris pass plotting/restoring path points
+U1B27_0C6F	PaintDebrisPaths	debris variant painting colours 201..214
+U1B27_0DAB	TankDeathDebris	death anim: random debris bursts
+U1B27_1B69	TankDeathFunky	death anim: 11 fireballs at once
+U1B27_25D9	TankDeathSparks	death anim: rings of dirt pixels
+U1B27_2840	TankDeathPulse	death anim: tank colour fades up/down
+U1B27_2902	TankDeathBlast	death anim: pulse then 1..4 explosions
+U1DD4_0108	WeaponImpact	impact effect/damage of current weapon
+U1DD4_1562	LightningStrike	random lightning strike
+U1F69_0024	DropTanks	unsupported tanks fall down
+U1F69_0366	DrawPlayfieldFrame	draws playfield border
+U1F69_03C7	TryCrumbleDirt	frame + dirt falls with Crumble Percent chance
+U1F69_040D	PlayerAim	turn input loop: angle/power/weapon until fire
+U1F69_0EF4	ControlAction	returns action code from kbd/mouse/AI
+U20C6_0004	DrawSky	draws sky background N + palette cycle
+U20C6_099E	SetupRound	walls, sky, terrain, tank placement
+U20C6_1268	DrawWeaponBar	weapon/guidance icon bar, ButtonX positions
+U22B7_0040	ShowPlayerInventory	popup with player status/inventory
+U22B7_08EC	ChooseGuideTarget	pick guidance target (kbd/mouse/AI)
+U2390_0009	BossKey	F10 fake DOS prompt
+U2390_021B	HotKeyHook	keyboard hook dispatching hot keys
+U23C3_2E0B	FreeComputers	disposes all Tanks_3EE2 AI objects
+GetF0E	BuyStrategy	returns f0E, shop buying strategy 1..4 used in U0E9B
+U26A9_0004	ApplyDamage	damage shield/guidance then men, returns men lost
+U26A9_014E	UpdatePlayerColor	refresh palette entry from Men
+U26A9_0165	SetPlayerNum	sets f00 player number
+U26A9_0175	SetPlayerMen	sets Men and updates colour
+U26A9_018F	AddScore	P.Score += Amount
+U26A9_01B0	SetPlayerColor	palette 19+f00 scaled by Men
+U26A9_0220	GetPlayerRGB	returns player's current RGB
+U26D4_0000	SinDeg	sine of integer degrees, table based
+U26D4_005A	CosDeg	cosine of integer degrees
+U26D4_00BD	TanDeg	SinDeg/CosDeg
+U27B1_0000	KeyboardIsr	INT 9 handler, key-down table
+U27B1_007D	InstallKeyboard	hooks INT 9, sets chain flag and hook
+U27B1_00E5	RemoveKeyboard	restores INT 9
+U27B1_010C	DisableBiosKeys	stop chaining to BIOS, flush buffer
+U27B1_014E	EnableBiosKeys	flush buffer, chain to BIOS again
+U27B1_0190	BiosKeysEnabled	chaining-to-BIOS flag
+U27B1_01AE	SetKeyHook	sets per-key hook g_4614
+U27B1_01C2	GetKeyHook	returns per-key hook g_4614
+U27D4_0000	PalCycleExitProc	exit proc, removes cycler
+U27D4_001E	PauseCycling	Dec cycle mode
+U27D4_0027	ResumeCycling	Inc cycle mode, max 1
+U27D4_003D	SetPalCycle	copy TPalCycle into cycler globals
+U27D4_008D	GetPalCycle	copy cycler globals into TPalCycle
+U27D4_00E3	CycleIsrForward	timer/retrace ISR, cycles forward
+U27D4_0195	CycleIsrBackward	timer/retrace ISR, cycles backward
+U27D4_0244	InstallPalCycler	hook INT 0Ah (retrace) or 1Ch
+U27D4_0346	RearmRetraceIrq	reprogram CRTC reg 11h and PIC
+U27D4_03A7	RemovePalCycler	restore interrupt vector
+U27D4_0428	ReverseCycling	toggle direction, swap ISR
+U2823_0000	SetMode13h	INT 10h AX=13h
+U2823_0006	FetchClipWindow	GetViewSettings into g_E7CC
+U2823_0015	PixelAddress	asm helper y,x -> ES:BX
+U2823_0025	MulLongWord	asm helper DX:AX *= CX
+U2823_0031	DrawRect	rectangle outline via 4 lines
+U2823_0088	FillBar	filled rectangle
+U2823_00CC	CopyBar	copy rect area from buffer
+U2823_011A	CopyRect	copy rect outline from buffer
+U2823_017D	DrawEllipseNoClip	ellipse outline, no clipping
+U2823_0351	DrawEllipse	ellipse outline, clipped to g_E7CC
+U2823_0687	CopyEllipse	ellipse outline copied from buffer
+U2823_09E4	DrawLine	Bresenham line
+U2823_0AC0	CopyLine	line copied from buffer
+U2823_0BB6	PlotPixel	put pixel at A000
+U2823_0BD8	CopyPixel	copy one pixel from buffer
+U2823_0BFF	PixelAt	get pixel at A000
+U2823_0C20	ReadDacBlock	INT 10h AX=1017h
+U2823_0C5A	ClearVgaScreen	zero A000 segment
+U2823_0C6E	SetDacBiosWait	DAC block via BIOS, retrace wait
+U2823_0C95	SetDacPortsWait86	DAC block via ports, wait, 8086
+U2823_0CC2	SetDacPortsWait286	DAC block via ports, wait, rep outsb
+U2823_0CEB	SetDacBios	DAC block via BIOS
+U2823_0D08	SetDacPorts86	DAC block via ports, 8086
+U2823_0D32	SetDacPorts286	DAC block via ports, rep outsb
+U2823_0D59	SetRGBBiosAlt	one DAC reg via BIOS (wait-mode slot, same as 0D98)
+U2823_0D71	SetRGBPortsWait	one DAC reg via ports, retrace wait
+U2823_0D98	SetRGBBios	one DAC reg via BIOS
+U2823_0DB0	SetRGBPorts	one DAC reg via ports
+U2823_0DCF	SelectDacRoutines	choose palette routines by CPU/flags
+U2918_0000	SavePicMasks	save ports 21h/81h
+U2918_000F	RestorePicMasks	restore ports 21h/81h
+U2918_001E	FullViewport	SetViewPort to whole screen
+U2918_003D	ViewCenterX	viewport-relative centre x
+U2918_0066	ViewCenterY	viewport-relative centre y
+U2918_008F	VecLength	Sqrt(A^2+B^2)
+U2918_00D9	DegToRad	degrees -> radians
+U2918_011B	RadToDeg	radians -> degrees
+U2918_015D	DetectVga256	InstallUserDriver detect func
+U2918_016F	WaitKey	wait key, Esc halts
+U2918_01A1	WaitKeyOrMouse	wait key/button, Esc/right halts
+U2918_022A	MouseX	mouse x scaled to 320
+U2918_0256	MouseY	mouse y
+U2918_0286	CheckGraphError	abort on GraphResult error
+U2918_00A5	IntPower	Trunc(A^B), BOMBCFG only
+U2918_02FE	IntToStr	LongInt -> string
+U2918_0337	UpperStr	upper-case a string
+U2918_03A9	MiscExitProc	exit proc restores ExitProc
+U2918_04A3	CpuType	CPUID.BIN CPU detection
+U2968_0000	SetMouseCursor	set cursor from TMouseCursor
+U2968_002E	SetMouseEnabled	sets g_E820
+U2968_003B	DetectMouse	INT 33h/0, returns/stores installed
+U2968_0047	ResetMouse	INT 33h/0, result ignored
+U2968_004D	ShowMouseCursor	INT 33h/1 if enabled
+U2968_005A	HideMouseCursor	INT 33h/2 if enabled
+U2968_0067	MouseRawX	INT 33h/3 CX
+U2968_006F	MouseRawY	INT 33h/3 DX
+U2968_0077	MouseBtnsDown	all given buttons pressed?
+U2968_009C	SetMouseShape	INT 33h/9 graphics cursor
+U2968_00B1	MouseStateSize	INT 33h/15h buffer size
+U2968_00B9	SaveMouseState	INT 33h/16h
+U2968_00C8	RestoreMouseState	INT 33h/17h
+U2968_00D7	MouseSoftReset	INT 33h/21h
+M0776	EditSoundOptions	Setup/Sound dialog (Sound Options)
+M099B	EditNumGames	Setup/Number of games dialog
+M0CC2	EditBackground	Setup/Background dialog + User Defined check
+M12BA	EditEnvironment	Options/Environment dialog (wind, wall, crumble)
+M1681	EditShotOptions	Options/Shot Control dialog
+M18D0	EditTankOptions	Options/Tank Control dialog
+M1B0F	EditComputerOptions	Options/Computers dialog
+M1D45	ShowAboutBox	startup About box (version, copyright)
+M208F	EditSpeedControls	Options/Speed Controls dialog (4 delays)
+M2587	EditHardware	Options/Hardware dialog
+M28D7	EditPaletteOptions	Options/Palette Control dialog
+M2C9E	ShowCfgNotFound	"no valid BOMB.CFG found" message box
+M2EC9	ShowCfgVersionError	BOMB.CFG version mismatch message box
+M30B1	RestoreDefaults	Setup/Restore Defaults: message + set defaults
+M3E34	ReadCfgFile	loads BOMB.CFG (v2.5 or v3.0) after defaults
+M3F1C	WriteCfgFile	saves options to BOMB.CFG
+M4319	SetDefaultOptions	assigns default values to all dialog data
+M43E5	SetOptionBit	set/clear bit number Bit of X
+Version_011E	CfgVersion	program/BOMB.CFG version string '3.0'
+HelpInUse_0124	HelpInUse	guards re-entry of help window
+c_0125	UnusedByte0125	not referenced
+MyApp_0FB0	MyApp	the TMyApp application object
+SoundData_0FE8	SoundData	Sound dialog data
+GamesData_0FEA	GamesData	Number of games dialog data
+BackData_0FEE	BackData	Background dialog data
+EnvData_0FF2	EnvData	Environment dialog data
+ShotData_0FFA	ShotData	Shot dialog data
+TankData_0FFC	TankData	Tank dialog data
+CompData_0FFE	CompData	Computers dialog data
+HwData_1000	HwData	Hardware dialog data
+PalData_1004	PalData	Palette dialog data
+SpeedData_100A	SpeedData	Speed dialog data
+Copyright_101A	CfgCopyright	copyright string assigned at startup
+Unused_111A	Unused111A	not referenced
+Version_0056	GameVersion	BOMB.CFG / save-file version string '3.0'
+c_005B	Unused005B	unreferenced data bytes
+DirChar_0064	DirChars	direction arrow chars (wind, tank)
+c_0067	Unused0067	unreferenced data bytes
+c_0075	Unused0075	unreferenced data bytes
+c_007C	AIName0	AI name 0 'Random' (first 196 bytes)
+c_0140	AIName0Part2	rest of AI name 0 string
+c_017C	AIName1	AI name 1 'Mr. Stupid'
+c_027C	AIName2	AI name 2 'Lobber' (first 148 bytes)
+c_0310	AIName2Part2	part of AI name 2 string
+c_0320	AIName2Part3	part of AI name 2 string
+c_035B	AIName2Part4	part of AI name 2 string
+c_035D	AIName2Part5	part of AI name 2 string
+c_035F	AIName2Part6	part of AI name 2 string
+c_0361	AIName2Part7	part of AI name 2 string
+c_0363	AIName2Part8	last part of AI name 2 string
+c_037C	AIName3	AI name 3 'Rifleman'
+c_047C	AIName4	AI name 4 'Lob & Shoot'
+c_057C	AIName5	AI name 5 'Windless Wit'
+c_067C	AIName6	AI name 6 'Twanger'
+c_077C	AIName7	AI name 7 'Wind Master'
+AINames_007C	AINames	array overlaying AIName0..7
+WeaponName_087C	WeaponNames	weapon full names
+WeaponShort_1A7C	WeaponShortNames	weapon short names (shop)
+WeaponPrice_2C7C	WeaponPrices	weapon prices
+WeaponQty_2CC4	WeaponBundles	weapon units per purchase
+GuidName_2CE8	GuideNames	guidance system names
+GuidShort_2EE8	GuideShortNames	guidance short names
+GuidPrice_30E8	GuidePrices	guidance prices
+GuidQty_30F0	GuideBundles	guidance units per purchase
+ShieldName_30F4	ShieldNames	shield names
+ShieldShort_33F4	ShieldShortNames	shield short names
+ShieldPrice_36F4	ShieldPrices	shield prices
+ShieldQty_3700	ShieldBundles	shield units per purchase
+NoCycle_3706	NoPalCycle	palette cycler parameter block: off
+KeyUp_3716	ScanUp	cursor up scan code
+KeyDn_3717	ScanDown	cursor down scan code
+KeyRt_3718	ScanRight	cursor right scan code
+KeyLt_3719	ScanLeft	cursor left scan code
+c_371A	MoreScanCodes	unreferenced scan code table (PgUp PgDn Home End ...)
+MouseCursors_3730	MouseCursors	mouse cursor shapes
+Buttons_3ACC	ShopButtons	shop screen buttons
+NumButtons_3E8C	NumShopButtons	number of shop buttons
+g_3E8D	Unused3E8D	unreferenced
+g_3E8E	ShopCartCost	shop: cost of units selected, not yet paid
+g_3E92	OldCartCost	shop: previous cart cost (redraw check)
+g_3E96	ShopSpent	shop: player's Spent incl. purchases
+g_3E9A	OldShopSpent	shop: previous ShopSpent (redraw check)
+DebX_3E9E	DebrisX	nuke fireball landing X
+DebY_3EB4	DebrisY	nuke fireball landing Y
+DebS_3ECA	DebrisSize	nuke fireball mushroom size
+g_3EE0	ExplColor	explosion circle colour scratch
+Tanks_3EE2	Tanks	computer player objects
+Players_3F0E	Players	player records
+g_440A	KeyDown	key-down table by scan code (INT 9 handler)
+g_460A	KbdInstalled	INT 9 handler installed
+g_460B	Unused460B	unreferenced
+g_460C	OldInt9	saved INT 9 vector
+g_4610	KbdChainBios	INT 9 handler chains to BIOS
+g_4611	Unused4611	unreferenced
+g_4612	KbdExtOffset	$100 after E0 prefix (extended key)
+g_4614	KbdHook	per-key hook called by INT 9 handler
+g_4618	Unused4618	unreferenced
+g_461C	LandHeight	terrain height while generating landscape
+g_461E	LoopI	scratch loop counter
+g_4620	LoopJ	scratch loop counter / Val error code
+g_4622	LoopK	scratch counter
+g_4624	TmpX	scratch X / loop counter
+g_4626	TmpY	scratch Y / loop counter
+g_4628	TmpR	scratch radius / loop counter
+g_462A	TmpC	scratch pixel colour / count
+g_462C	TmpN	scratch size count (fireball)
+g_462E	DoneFlag2	scratch loop-exit flag
+g_462F	DoneFlag	scratch loop-exit flag
+g_4630	Unused4630	unreferenced
+g_4644	HotKeysOn	hot-key handler enabled
+g_4645	Unused4645	unreferenced
+g_4646	Unknown4646	only zeroed at init
+g_4648	StartMemAvail	MemAvail at program start
+g_464C	Unknown464C	only zeroed at init
+g_4650	Unknown4650	only zeroed at init
+g_4654	ShowHelp	command line H: print help
+g_4655	Unused4655	unreferenced
+g_4656	CpuKind	detected CPU type
+g_4658	LaserPixel	laser: pixel colour scratch
+g_465C	Unused465C	unreferenced
+g_4660	LaserY	laser: debris Y scratch
+g_4664	Unused4664	unreferenced
+g_4670	ShotX	projectile X
+g_4676	ShotY	projectile Y
+g_467C	ShotVX	projectile X velocity
+g_4682	ShotVY	projectile Y velocity
+g_4688	AIUnknown4688	set to -1 by TComputer.Init only
+g_468E	AIUnknown468E	set to -1 by TComputer.Init only
+g_4694	Unused4694	unreferenced
+g_469A	TmpScale	scratch Real scale factor
+g_46A0	LaserScale	laser: energy to radius factor
+g_46A6	Unused46A6	unreferenced
+g_46AC	WallBounce	wall reflection velocity factor
+g_46B2	BlastSize	weapon blast radius / digger count
+g_46B4	NumPlayers	number of players (2..10)
+g_46B6	Unused46B6	unreferenced
+g_46B8	HitColor	pixel colour where the shot stopped
+g_46BA	RoundWinner	winning team of the round (0 = none)
+g_46BC	GameNo	current game number (1-based)
+g_46BE	RoundWind	wind mode of this round
+g_46C0	GuideTarget	target player of guided shot
+g_46C2	SavedUnused46C2	only saved/loaded with the game
+g_46C4	TurnLap	turn cycles in this round
+g_46C6	RoundWall	wall mode of this round
+g_46C8	CurPlayer	player whose turn it is
+g_46C9	KeyChar	scratch ReadKey char
+g_46CA	TmpStr	scratch string (params)
+g_46E9	TankDied	a tank died, re-check
+g_46EA	Unused46EA	unreferenced
+g_46EC	AllComputers	all players are computers
+g_46ED	RoundOver	only one team left
+g_46EE	WallsBounce	walls reflect (wall mode 1..3)
+g_46EF	WallsWrap	walls wrap around (wall mode 4)
+g_46F0	SaveRequested	show save dialog after standings
+g_46F1	LoadRequested	Load Game chosen in main menu
+g_46F2	AutoSave	autosave after each game
+g_46F3	Unused46F3	unreferenced
+g_46F8	BombOldExitProc	saved ExitProc (main program)
+SaveName_46FC	SaveName	saved game file name
+g_4711	Unused4711	unreferenced pad byte
+Teams_4712	Teams	team records
+g_4959	Unused4959	unreferenced pad byte
+g_495A	ShotLogData	start of shot log area (ShotLog absolute)
+Rec_495A	ShotLogRecs	shot log as 11 raw records (cleared per player)
+g_495C	ShotLog495C	inside shot log area
+g_495E	ShotLog495E	inside shot log area
+g_4960	ShotLog4960	inside shot log area
+g_4962	ShotLog4962	inside shot log area
+g_9984	ShotLog9984	inside shot log area
+g_9986	ShotLog9986	inside shot log area
+PalCycle_9FB8	PalCycle	palette cycler parameter block
+Paths_9FC8	Paths	explosion debris paths
+Dirs_DE48	DiggerDirs	digger: free directions
+g_DE50	UnusedDE50	unreferenced
+PalPtr_DE7C	FallList	dirt-fall work list / palette scratch (64512 bytes)
+Pal_DE80	CyclePal	2 x 30 cycling colours
+g_DF34	UnusedDF34	unreferenced
+Control_E480	Controls	per-player control type (1 keyb, 2 mouse, 3 computer)
+SaveBuf_E496	SaveBuf	copy of screen behind pop-ups
+BackBuf_E49A	BackBuf	background image buffer
+Pal_E49E	BlastPal	explosion / laser colour ramp
+g_E6F9	UnusedE6F9	unreferenced pad byte
+Pts_E6FA	DiggerPts	digger head positions
+ButtonX_E74E	BarButtonX	status bar button left edges
+g_E778	WindForce	current wind (signed)
+g_E77A	CrumblePct	cfg: crumble percentage
+g_E77C	GamesToPlay	cfg: number of games
+g_E77E	WindControl	cfg: wind 0..5
+g_E780	WallControl	cfg: wall reflectivity 0..5
+g_E782	BackControl	cfg: background selection
+g_E784	BackMask	cfg: user-selected backgrounds bit mask
+g_E786	PaletteOn	cfg: palette rotation
+g_E787	FlySound	cfg: flying sound
+g_E788	SoundOn	cfg: sound effects
+g_E789	InvisoBall	cfg: invisible ball
+g_E78A	ShotTrail	cfg: shot trace
+g_E78B	MouseIn	cfg: mouse enabled
+g_E78C	CrudeVideo	cfg: crude video manipulation
+g_E78D	TanksFall	cfg: tanks fall down
+g_E78E	ShowTitle	show title screen (SKIP clears)
+g_E78F	CompuBuy	cfg: computers can buy weapons
+g_E790	ForceMouse	cfg: mouse setting forced
+g_E791	TeamPlay	cfg: team play mode
+g_E792	DirectPorts	cfg: direct video port access
+g_E793	PalUseRetrace	cfg: palette uses retrace IRQ
+g_E794	BeginnerGame	command line NEW
+g_E795	DebugMode	command line DEBUG
+g_E796	PalSpeed	cfg: palette cycling speed
+g_E798	TurretSpeed	cfg: turret speed
+g_E79A	ExplodeSpeed	cfg: explosion speed
+g_E79C	FallSpeed	cfg: fall speed
+g_E79E	ShotSpeed	cfg: shot speed
+g_E7A0	CycFirst	cycler: first colour
+g_E7A2	CycField2	cycler: field 2 (unknown)
+g_E7A4	CycCount	cycler: number of colours - 1
+g_E7A6	CycMode	cycler: mode (1 = cycling)
+g_E7A8	CycPal	cycler: palette data
+g_E7AC	CycPos	cycler: current position
+g_E7AE	CycInstalled	cycler: interrupt installed
+g_E7AF	CycSpeed	cycler: ticks per step
+g_E7B0	CycTicks	cycler: tick counter
+g_E7B1	UnusedE7B1	unreferenced
+g_E7B2	CycOldVec	cycler: old interrupt vector
+g_E7B6	CycCrtcPort	cycler: CRTC index port
+g_E7B8	CycCrtcReg	cycler: CRTC register index
+g_E7B9	CycCrtcSaved	cycler: saved CRTC register $11
+g_E7BA	CycOldExitProc	cycler: saved ExitProc
+g_E7BE	CycForward	cycler: direction forward
+g_E7BF	CycUseRetrace	cycler: retrace IRQ instead of timer
+g_E7C0	PalBlockNoWaitHook	SetPalette w/o retrace wait
+g_E7C4	PalBlockHook	SetPalette hook
+g_E7C8	RGBHook	SetRGB hook
+g_E7CC	ClipView	clip window of primitives
+g_E7D5	UnusedE7D5	unreferenced
+g_E7D6	VideoSeg	video segment of primitives
+g_E7D8	VidUsePorts	use ports instead of BIOS
+g_E7D9	VidNoWait	no retrace wait
+g_E7DA	VidCpuType	CPU type given to U2823
+g_E7DC	UnusedE7DC	unreferenced
+g_E7E2	FontEuro	font id EURO
+g_E7E4	FontLcom	font id LCOM
+g_E7E6	FontScri	font id SCRI
+g_E7E8	FontSimp	font id SIMP
+g_E7EA	FontTscr	font id TSCR
+g_E7EC	FontTiny	font id TINY
+g_E7EE	DriverVga256	BGI driver id vga256
+g_E7F0	UnusedE7F0	unreferenced
+g_E819	SavedPicMask	saved PIC1 mask
+g_E81A	SavedPort81	saved port 81h
+g_E81B	UnusedE81B	unreferenced
+g_E81C	MiscOldExitProc	saved ExitProc (U2918)
+g_E820	MouseEnabled	mouse in use
+g_E821	UnusedE821	unreferenced

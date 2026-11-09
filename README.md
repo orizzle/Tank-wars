@@ -73,8 +73,14 @@ U2918 misc/strings/CPU detection, U2968 mouse.
 ## Conventions
 * `{#Uxxxx_OOOO}` markers precede every procedure; the name gives the unit and
   its entry offset in the original, and `tools/cmp.py` uses it to compare procedure by procedure.
-* Procedure names are still `Uxxxx_OOOO` (comments say what they do); globals
-  carry their DS offset as a suffix (`Players_3F0E`).
+* Identifiers are readable names; `notes/names.tsv` maps each one to its
+  placeholder name (`U1B27_0047` = unit U1B27, entry offset 0047 in the
+  original; `Players_3F0E` = DS:3F0E) with a one-line note.  Global
+  declarations carry their DS offset as a comment (`{ DS:3F0E }`).
+  `tools/rename.py TABLE [--apply]` renames safely: it refuses any new name that
+  already exists in the sources, in the Borland units or as a reserved word, so
+  a rename cannot re-bind a reference.  Names are a best reading of the code;
+  `UnknownXXXX`/`UnusedXXXX` mark what is unclear or unreferenced.
 * Dev builds (`build.py` without `--final`) add a `KEEPALL` reference to every
   procedure so the smart linker keeps it while callers are unfinished.
 * See `notes/GUIDE.md` for TP6 code-generation details found along the way.

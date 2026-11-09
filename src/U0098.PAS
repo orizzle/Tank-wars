@@ -17,30 +17,30 @@ uses
   U2823, U27D4, U27D1, U27B1, U26D4, U26A9,
   U23C3;
 
-procedure U0098_0000;
-procedure U0098_0006;
-procedure U0098_0010;
-procedure U0098_01BD;
-procedure U0098_0226(S: string);
-procedure U0098_028C(X1, Y1, X2, Y2: Integer; Fill, Light, Dark: Word);
-procedure U0098_03A8(X, Y: Integer);
-procedure U0098_03F4(X, Y: Integer; Buf: Pointer);
-procedure U0098_0455(Src, Dst: Pointer; Color: Byte);
-procedure U0098_047B(List, Buf: Pointer);
-procedure U0098_0552(X, Y: Integer; Color: Byte; Buf: Pointer);
-procedure U0098_0579(Lo, Hi: Byte; Buf: Pointer);
-procedure U0098_05A9(Color: Byte; Buf: Pointer);
-procedure U0098_05D2(X, Y: Integer; Color: Byte);
-procedure U0098_066A(X, Y: Integer; Buf: Pointer);
-procedure U0098_07A3(P: Integer);
-procedure U0098_08C2(P: Integer);
-function  U0098_09B2: Boolean;
-procedure U0098_09ED;
-procedure U0098_0A58;
-procedure U0098_0C03;
-procedure U0098_0C63;
-procedure U0098_0ED2;
-procedure U0098_18B2;
+procedure DisableHotKeys;
+procedure EnableHotKeys;
+procedure RandomizeBackColors;
+procedure InitPanelGreys;
+procedure DebugTrace(S: string);
+procedure DrawPanel3D(X1, Y1, X2, Y2: Integer; Fill, Light, Dark: Word);
+procedure DrawPlusMark(X, Y: Integer);
+procedure ErasePlusMark(X, Y: Integer; Buf: Pointer);
+procedure CopyColorPixels(Src, Dst: Pointer; Color: Byte);
+procedure DropDirt(List, Buf: Pointer);
+procedure PlotScreenAndBuf(X, Y: Integer; Color: Byte; Buf: Pointer);
+procedure RestoreColorRange(Lo, Hi: Byte; Buf: Pointer);
+procedure RestoreColorPixels(Color: Byte; Buf: Pointer);
+procedure DrawTankBody(X, Y: Integer; Color: Byte);
+procedure EraseTankBody(X, Y: Integer; Buf: Pointer);
+procedure DrawTank(P: Integer);
+procedure EraseTank(P: Integer);
+function  AbortKeysDown: Boolean;
+procedure KillAllTanks;
+procedure MassKillDialog;
+procedure QuitToDos;
+procedure QuitDialog;
+procedure ShowGameStatus;
+procedure ShowControlList;
 procedure VGA256Driver;
 procedure LittFont;
 procedure EuroFont;
@@ -60,28 +60,28 @@ type
 
 var
   { U2823's "set one DAC register" hook }
-  SetRGB: TSetRGB absolute g_E7C8;
+  SetRGB: TSetRGB absolute RGBHook;
   Screen: TScreen absolute $A000:0;
   KbdFlags: Byte absolute $40:$17;
 
-{ disable the hot-key handler (U2390_021B) }
+{ disable the hot-key handler (HotKeyHook) }
 {#U0098_0000}
-procedure U0098_0000; assembler;
+procedure DisableHotKeys; assembler;
 asm
-  mov g_4644, 0
+  mov HotKeysOn, 0
 end;
 
 { enable the hot-key handler }
 {#U0098_0006}
-procedure U0098_0006; assembler;
+procedure EnableHotKeys; assembler;
 asm
-  mov g_4644, 1
+  mov HotKeysOn, 1
 end;
 
 { Ctrl-R: pick 3 random colours and fade between them in the 30 cycling
   background colours (DAC 30..59) }
 {#U0098_0010}
-procedure U0098_0010;
+procedure RandomizeBackColors;
 var
   C: array[0..2, 0..2] of Integer;
   I, J, K: Integer;
@@ -95,30 +95,30 @@ begin
     begin
       for K := 0 to 2 do
         RGB[K] := Trunc((C[(I + 1) mod 3, K] - C[I, K]) / 10 * J + C[I, K]);
-      Pal_DE80[10 * I + 1 + J].R := RGB[0];
-      Pal_DE80[10 * I + 31 + J].R := RGB[0];
-      Pal_DE80[10 * I + 1 + J].G := RGB[1];
-      Pal_DE80[10 * I + 31 + J].G := RGB[1];
-      Pal_DE80[10 * I + 1 + J].B := RGB[2];
-      Pal_DE80[10 * I + 31 + J].B := RGB[2];
+      CyclePal[10 * I + 1 + J].R := RGB[0];
+      CyclePal[10 * I + 31 + J].R := RGB[0];
+      CyclePal[10 * I + 1 + J].G := RGB[1];
+      CyclePal[10 * I + 31 + J].G := RGB[1];
+      CyclePal[10 * I + 1 + J].B := RGB[2];
+      CyclePal[10 * I + 31 + J].B := RGB[2];
       SetRGB(10 * I + 30 + J, RGB[0], RGB[1], RGB[2]);
     end;
 end;
 
 { set the three panel grey levels (17..19) and init the line style }
 {#U0098_01BD}
-procedure U0098_01BD;
+procedure InitPanelGreys;
 begin
   SetRGB(17, 21, 21, 21);
   SetRGB(18, 42, 42, 42);
   SetRGB(19, 63, 63, 63);
-  U2823_0006;
-  g_E7D6 := $A000;
+  FetchClipWindow;
+  VideoSeg := $A000;
 end;
 
 { debug trace: print S and wait for a key }
 {#U0098_0226}
-procedure U0098_0226(S: string);
+procedure DebugTrace(S: string);
 var
   SaveDV: Boolean;
   Unused: Byte;                { unused; keeps the frame layout }
@@ -127,28 +127,28 @@ begin
   DirectVideo := False;
   Writeln(S + ' - Press any key to continue');
   DirectVideo := SaveDV;
-  U2918_016F;
+  WaitKey;
 end;
 
 { 3-D panel: filled bar with a 2-pixel bevel }
 {#U0098_028C}
-procedure U0098_028C(X1, Y1, X2, Y2: Integer; Fill, Light, Dark: Word);
+procedure DrawPanel3D(X1, Y1, X2, Y2: Integer; Fill, Light, Dark: Word);
 begin
   SetFillStyle(SolidFill, Fill);
   Bar(X1, Y1, X2, Y2);
-  U2823_09E4(X2 + 1, Y1 - 1, X2 + 1, Y2 + 1, Dark);
-  U2823_09E4(X2 + 2, Y1 - 2, X2 + 2, Y2 + 2, Dark);
-  U2823_09E4(X1 - 1, Y2 + 1, X2 + 1, Y2 + 1, Dark);
-  U2823_09E4(X1 - 2, Y2 + 2, X2 + 2, Y2 + 2, Dark);
-  U2823_09E4(X1 - 1, Y1 - 1, X1 - 1, Y2 + 1, Light);
-  U2823_09E4(X1 - 2, Y1 - 2, X1 - 2, Y2 + 2, Light);
-  U2823_09E4(X1 - 1, Y1 - 1, X2 + 1, Y1 - 1, Light);
-  U2823_09E4(X1 - 2, Y1 - 2, X2 + 2, Y1 - 2, Light);
+  DrawLine(X2 + 1, Y1 - 1, X2 + 1, Y2 + 1, Dark);
+  DrawLine(X2 + 2, Y1 - 2, X2 + 2, Y2 + 2, Dark);
+  DrawLine(X1 - 1, Y2 + 1, X2 + 1, Y2 + 1, Dark);
+  DrawLine(X1 - 2, Y2 + 2, X2 + 2, Y2 + 2, Dark);
+  DrawLine(X1 - 1, Y1 - 1, X1 - 1, Y2 + 1, Light);
+  DrawLine(X1 - 2, Y1 - 2, X1 - 2, Y2 + 2, Light);
+  DrawLine(X1 - 1, Y1 - 1, X2 + 1, Y1 - 1, Light);
+  DrawLine(X1 - 2, Y1 - 2, X2 + 2, Y1 - 2, Light);
 end;
 
 { draw a small '+' (colour 19) directly into VGA memory }
 {#U0098_03A8}
-procedure U0098_03A8(X, Y: Integer);
+procedure DrawPlusMark(X, Y: Integer);
 begin
   if (X <= 0) or (X >= 320) or (Y <= 0) or (Y >= 199) then Exit;
   asm
@@ -171,7 +171,7 @@ end;
 
 { erase the '+' again by copying the pixels from Buf (segment only) }
 {#U0098_03F4}
-procedure U0098_03F4(X, Y: Integer; Buf: Pointer);
+procedure ErasePlusMark(X, Y: Integer; Buf: Pointer);
 begin
   if (X <= 0) or (X >= 320) or (Y <= 0) or (Y >= 199) then Exit;
   asm
@@ -202,7 +202,7 @@ end;
 { copy every pixel of colour Color from Src to Dst (64000-byte screens,
   segments only) }
 {#U0098_0455}
-procedure U0098_0455(Src, Dst: Pointer; Color: Byte); assembler;
+procedure CopyColorPixels(Src, Dst: Pointer; Color: Byte); assembler;
 asm
   push ds
   mov dl, Color
@@ -225,7 +225,7 @@ end;
 { let the dirt fall: List^ is a work list of screen offsets (terminated by
   $FFFF), Buf the background image (segment only); colour 2 = dirt }
 {#U0098_047B}
-procedure U0098_047B(List, Buf: Pointer); assembler;
+procedure DropDirt(List, Buf: Pointer); assembler;
 asm
   push ds
   push si
@@ -334,7 +334,7 @@ end;
 
 { plot a pixel both on the screen and into Buf (segment only) }
 {#U0098_0552}
-procedure U0098_0552(X, Y: Integer; Color: Byte; Buf: Pointer); assembler;
+procedure PlotScreenAndBuf(X, Y: Integer; Color: Byte; Buf: Pointer); assembler;
 asm
   push ds
   mov ax, Y
@@ -354,7 +354,7 @@ end;
 
 { restore every screen pixel with a colour in Lo..Hi from Buf }
 {#U0098_0579}
-procedure U0098_0579(Lo, Hi: Byte; Buf: Pointer); assembler;
+procedure RestoreColorRange(Lo, Hi: Byte; Buf: Pointer); assembler;
 asm
   push ds
   mov dh, Hi
@@ -380,7 +380,7 @@ end;
 
 { restore every screen pixel of colour Color from Buf }
 {#U0098_05A9}
-procedure U0098_05A9(Color: Byte; Buf: Pointer); assembler;
+procedure RestoreColorPixels(Color: Byte; Buf: Pointer); assembler;
 asm
   push ds
   mov dl, Color
@@ -403,7 +403,7 @@ end;
 
 { draw the tank body (a small dome) at X,Y in colour Color }
 {#U0098_05D2}
-procedure U0098_05D2(X, Y: Integer; Color: Byte); assembler;
+procedure DrawTankBody(X, Y: Integer; Color: Byte); assembler;
 asm
   push ds
   mov ax, Y
@@ -452,7 +452,7 @@ end;
 
 { erase the tank body at X,Y by copying the same pixels from Buf }
 {#U0098_066A}
-procedure U0098_066A(X, Y: Integer; Buf: Pointer); assembler;
+procedure EraseTankBody(X, Y: Integer; Buf: Pointer); assembler;
 asm
   push ds
   mov ax, Y
@@ -535,59 +535,59 @@ end;
 
 { draw tank P (body + turret) if it is alive }
 {#U0098_07A3}
-procedure U0098_07A3(P: Integer);
+procedure DrawTank(P: Integer);
 var
   Color: Integer;
 begin
-  if Players_3F0E[P].f23 <> 0 then
+  if Players[P].f23 <> 0 then
   begin
-    U26A9_014E(Players_3F0E[P]);
+    UpdatePlayerColor(Players[P]);
     Color := P + 19;
-    U0098_05D2(Players_3F0E[P].X, Players_3F0E[P].Y, Color);
-    U2823_09E4(Players_3F0E[P].X, Players_3F0E[P].Y,
-      Players_3F0E[P].X + Trunc(Cos(U2918_00D9(Players_3F0E[P].f1D)) * 8) * Players_3F0E[P].f1F,
-      Players_3F0E[P].Y - Trunc(Sin(U2918_00D9(Players_3F0E[P].f1D)) * 8),
+    DrawTankBody(Players[P].X, Players[P].Y, Color);
+    DrawLine(Players[P].X, Players[P].Y,
+      Players[P].X + Trunc(Cos(DegToRad(Players[P].f1D)) * 8) * Players[P].f1F,
+      Players[P].Y - Trunc(Sin(DegToRad(Players[P].f1D)) * 8),
       Color);
   end;
 end;
 
 { erase tank P (body + turret) from the background buffer }
 {#U0098_08C2}
-procedure U0098_08C2(P: Integer);
+procedure EraseTank(P: Integer);
 begin
-  U0098_066A(Players_3F0E[P].X, Players_3F0E[P].Y, BackBuf_E49A);
-  U2823_0AC0(Players_3F0E[P].X, Players_3F0E[P].Y,
-    Players_3F0E[P].X + Trunc(Cos(U2918_00D9(Players_3F0E[P].f1D)) * 8) * Players_3F0E[P].f1F,
-    Players_3F0E[P].Y - Trunc(Sin(U2918_00D9(Players_3F0E[P].f1D)) * 8),
-    BackBuf_E49A);
+  EraseTankBody(Players[P].X, Players[P].Y, BackBuf);
+  CopyLine(Players[P].X, Players[P].Y,
+    Players[P].X + Trunc(Cos(DegToRad(Players[P].f1D)) * 8) * Players[P].f1F,
+    Players[P].Y - Trunc(Sin(DegToRad(Players[P].f1D)) * 8),
+    BackBuf);
 end;
 
 { both shift keys or both mouse buttons pressed? }
 {#U0098_09B2}
-function U0098_09B2: Boolean;
+function AbortKeysDown: Boolean;
 var
   B: Boolean;
   Dummy: Integer;              { unused; keeps the frame layout }
 begin
   B := False;
   if KbdFlags and 3 = 3 then B := True;  { both shift keys }
-  if U2968_0077(3) then B := True;
-  U0098_09B2 := B;
+  if MouseBtnsDown(3) then B := True;
+  AbortKeysDown := B;
 end;
 
 { kill all tanks }
 {#U0098_09ED}
-procedure U0098_09ED;
+procedure KillAllTanks;
 var
   I: Integer;
 begin
-  for I := 1 to g_46B4 do
-    Players_3F0E[I].f23 := 0;
+  for I := 1 to NumPlayers do
+    Players[I].f23 := 0;
 end;
 
 { Ctrl-M: mass kill (with Y/N confirmation) }
 {#U0098_0A58}
-procedure U0098_0A58;
+procedure MassKillDialog;
 var
   Color: Word;
   TS: TextSettingsType;
@@ -595,9 +595,9 @@ var
   Done: Boolean;
   VP: ViewPortType;
 begin
-  U2968_005A;
+  HideMouseCursor;
   NoSound;
-  SaveBuf_E496^ := Screen;
+  SaveBuf^ := Screen;
   Color := GetColor;
   GetTextSettings(TS);
   GetFillSettings(FS);
@@ -608,8 +608,8 @@ begin
   SetFillStyle(SolidFill, 0);
   SetColor(13);
   Bar(85, 75, 235, 125);
-  U2823_0031(85, 75, 235, 125, 13);
-  U2823_0031(87, 77, 233, 123, 13);
+  DrawRect(85, 75, 235, 125, 13);
+  DrawRect(87, 77, 233, 123, 13);
   SetColor(15);
   SetTextJustify(CenterText, CenterText);
   OutTextXY(160, 84, '! WARNING !');
@@ -617,28 +617,28 @@ begin
   OutTextXY(160, 116, 'ARE YOU SURE (Y/N)');
   Done := False;
   repeat
-    if g_440A[$15] <> 0 then          { Y }
+    if KeyDown[$15] <> 0 then          { Y }
     begin
       Done := True;
-      U0098_09ED;
+      KillAllTanks;
     end;
-    if g_440A[$31] <> 0 then Done := True;   { N }
+    if KeyDown[$31] <> 0 then Done := True;   { N }
   until Done;
   SetTextJustify(TS.Horiz, TS.Vert);
   SetFillStyle(FS.Color, FS.Pattern);    { sic }
   SetColor(Color);
   SetViewPort(VP.x1, VP.y1, VP.x2, VP.y2, VP.Clip);
-  Screen := SaveBuf_E496^;
-  U2968_004D;
+  Screen := SaveBuf^;
+  ShowMouseCursor;
 end;
 
 { quit to DOS }
 {#U0098_0C03}
-procedure U0098_0C03;
+procedure QuitToDos;
 begin
   CloseGraph;
   NoSound;
-  U27B1_00E5;
+  RemoveKeyboard;
   TextMode(CO80);
   Writeln('  Game Aborted......');
   Halt(1);
@@ -646,7 +646,7 @@ end;
 
 { Ctrl-Q: quit game (with Y/N confirmation) }
 {#U0098_0C63}
-procedure U0098_0C63;
+procedure QuitDialog;
 var
   Color: Word;
   TS: TextSettingsType;
@@ -654,9 +654,9 @@ var
   Done: Boolean;
   VP: ViewPortType;
 begin
-  U2968_005A;
+  HideMouseCursor;
   NoSound;
-  SaveBuf_E496^ := Screen;
+  SaveBuf^ := Screen;
   Color := GetColor;
   GetTextSettings(TS);
   GetFillSettings(FS);
@@ -667,32 +667,32 @@ begin
   SetFillStyle(SolidFill, 0);
   SetColor(13);
   Bar(85, 88, 235, 112);
-  U2823_0031(85, 88, 235, 112, 13);
-  U2823_0031(87, 90, 233, 110, 13);
+  DrawRect(85, 88, 235, 112, 13);
+  DrawRect(87, 90, 233, 110, 13);
   SetColor(15);
   SetTextJustify(CenterText, CenterText);
   OutTextXY(160, 96, 'ARE YOU SURE YOU');
   OutTextXY(160, 105, 'WISH TO QUIT (Y/N)');
   Done := False;
   repeat
-    if g_440A[$15] <> 0 then          { Y }
+    if KeyDown[$15] <> 0 then          { Y }
     begin
       Done := True;
-      U0098_0C03;
+      QuitToDos;
     end;
-    if g_440A[$31] <> 0 then Done := True;   { N }
+    if KeyDown[$31] <> 0 then Done := True;   { N }
   until Done;
   SetTextJustify(TS.Horiz, TS.Vert);
   SetFillStyle(FS.Color, FS.Pattern);    { sic }
   SetColor(Color);
   SetViewPort(VP.x1, VP.y1, VP.x2, VP.y2, VP.Clip);
-  Screen := SaveBuf_E496^;
-  U2968_004D;
+  Screen := SaveBuf^;
+  ShowMouseCursor;
 end;
 
 { Ctrl-P: game status / pause }
 {#U0098_0ED2}
-procedure U0098_0ED2;
+procedure ShowGameStatus;
 var
   Color: Word;
   TS: TextSettingsType;
@@ -701,9 +701,9 @@ var
   VP: ViewPortType;
   X, Y: Integer;               { Y unused }
 begin
-  U2968_005A;
+  HideMouseCursor;
   NoSound;
-  SaveBuf_E496^ := Screen;
+  SaveBuf^ := Screen;
   Color := GetColor;
   GetTextSettings(TS);
   GetFillSettings(FS);
@@ -714,8 +714,8 @@ begin
   SetFillStyle(SolidFill, 0);
   SetColor(13);
   Bar(10, 25, 310, 175);
-  U2823_0031(10, 25, 310, 175, 13);
-  U2823_0031(12, 27, 308, 173, 13);
+  DrawRect(10, 25, 310, 175, 13);
+  DrawRect(12, 27, 308, 173, 13);
   SetColor(15);
   SetTextJustify(CenterText, CenterText);
   OutTextXY(160, 35, 'Game Status');
@@ -724,103 +724,103 @@ begin
   MoveTo(20, 45);
   SetColor(1);  OutText('Sound: ');
   SetColor(5);  OutText('Effect (');
-  SetColor(14); OutText(U0728_0007(Boolean(g_E788)));
+  SetColor(14); OutText(YesNoStr(Boolean(SoundOn)));
   SetColor(5);  OutText(')   Fly (');
-  SetColor(14); OutText(U0728_0007(Boolean(g_E787)));
+  SetColor(14); OutText(YesNoStr(Boolean(FlySound)));
   SetColor(5);  OutText(')');
 
   MoveTo(20, 55);
   SetColor(1);  OutText('Ground: ');
   SetColor(5);  OutText('Crumbles (');
-  SetColor(14); OutText(U2918_02FE(g_E77A) + '%');
+  SetColor(14); OutText(IntToStr(CrumblePct) + '%');
   SetColor(5);  OutText(')');
 
   MoveTo(20, 65);
   SetColor(1);  OutText('The Walls: ');
   SetColor(5);  X := GetX;
   OutText('Rebound (');
-  SetColor(14); OutText(U0728_0F3B(g_E780));
+  SetColor(14); OutText(WallTypeName(WallControl));
   SetColor(5);  OutText(')');
   MoveTo(X, 75);
   OutText('This Round (');
-  SetColor(14); OutText(U0728_0F3B(g_46C6));
+  SetColor(14); OutText(WallTypeName(RoundWall));
   SetColor(5);  OutText(')');
 
   MoveTo(20, 85);
   SetColor(1);  OutText('The Shot: ');
   SetColor(5);  X := GetX;
   OutText('Invisible (');
-  SetColor(14); OutText(U0728_0007(Boolean(g_E789)));
+  SetColor(14); OutText(YesNoStr(Boolean(InvisoBall)));
   SetColor(5);  OutText(')');
   MoveTo(X, 95);
   OutText('Trail (');
-  SetColor(14); OutText(U0728_0007(Boolean(g_E78A)));
+  SetColor(14); OutText(YesNoStr(Boolean(ShotTrail)));
   SetColor(5);  OutText(')');
 
   MoveTo(20, 105);
   SetColor(1);  OutText('Game: ');
   SetColor(5);  OutText('Number (');
-  SetColor(14); OutText(U2918_02FE(g_46BC));
+  SetColor(14); OutText(IntToStr(GameNo));
   SetColor(5);  OutText(') of (');
-  SetColor(14); OutText(U2918_02FE(g_E77C));
+  SetColor(14); OutText(IntToStr(GamesToPlay));
   SetColor(5);  OutText(')');
 
   MoveTo(20, 115);
   SetColor(1);  OutText('Tanks: ');
   SetColor(5);  OutText('Fall (');
-  SetColor(14); OutText(U0728_0007(Boolean(g_E78D)));
+  SetColor(14); OutText(YesNoStr(Boolean(TanksFall)));
   SetColor(5);  OutText(')');
 
   MoveTo(20, 135);
   SetColor(1);  OutText('Computers: ');
   SetColor(5);  OutText('Buy Weapons (');
-  SetColor(14); OutText(U0728_0007(Boolean(g_E78F)));
+  SetColor(14); OutText(YesNoStr(Boolean(CompuBuy)));
   SetColor(5);  OutText(')');
 
   MoveTo(20, 145);
   SetColor(1);  OutText('Screen: ');
   SetColor(5);  OutText('Backgound (');
-  SetColor(14); OutText(U0728_0DEF(g_E782));
+  SetColor(14); OutText(BackgroundName(BackControl));
   SetColor(5);  OutText(')');
 
   MoveTo(20, 155);
   SetColor(1);  OutText('The Wind: ');
   SetColor(5);  X := GetX;
   OutText('Control (');
-  SetColor(14); OutText(U0728_0FFC(g_E77E));
+  SetColor(14); OutText(WindForceName(WindControl));
   SetColor(5);  OutText(')');
   MoveTo(X, 165);
   OutText('This Round (');
-  SetColor(14); OutText(U0728_0FFC(g_46BE));
+  SetColor(14); OutText(WindForceName(RoundWind));
   SetColor(5);  OutText(')');
 
   { wait for a key / button press, then for its release }
   Done := False;
   repeat
-    if U2968_0077(1) or U2968_0077(2) then Done := True;
-    if g_440A[$39] <> 0 then Done := True;   { Space }
-    if g_440A[$1C] <> 0 then Done := True;   { Enter }
-    if g_440A[$01] <> 0 then Done := True;   { Esc }
+    if MouseBtnsDown(1) or MouseBtnsDown(2) then Done := True;
+    if KeyDown[$39] <> 0 then Done := True;   { Space }
+    if KeyDown[$1C] <> 0 then Done := True;   { Enter }
+    if KeyDown[$01] <> 0 then Done := True;   { Esc }
   until Done;
   repeat
     Done := False;
-    if U2968_0077(1) or U2968_0077(2) then Done := True;
-    if g_440A[$39] <> 0 then Done := True;
-    if g_440A[$1C] <> 0 then Done := True;
-    if g_440A[$01] <> 0 then Done := True;
+    if MouseBtnsDown(1) or MouseBtnsDown(2) then Done := True;
+    if KeyDown[$39] <> 0 then Done := True;
+    if KeyDown[$1C] <> 0 then Done := True;
+    if KeyDown[$01] <> 0 then Done := True;
   until not Done;
 
   SetTextJustify(TS.Horiz, TS.Vert);
   SetFillStyle(FS.Color, FS.Pattern);    { sic }
   SetColor(Color);
   SetViewPort(VP.x1, VP.y1, VP.x2, VP.y2, VP.Clip);
-  Screen := SaveBuf_E496^;
-  U2968_004D;
+  Screen := SaveBuf^;
+  ShowMouseCursor;
 end;
 
 { F1: control list (help) }
 {#U0098_18B2}
-procedure U0098_18B2;
+procedure ShowControlList;
 var
   Color: Word;
   TS: TextSettingsType;
@@ -829,10 +829,10 @@ var
   VP: ViewPortType;
   X, Y, Z: Integer;            { X = indent of the "Any Time" list; Y, Z unused }
 begin
-  U27D4_001E;
-  U2968_005A;
+  PauseCycling;
+  HideMouseCursor;
   NoSound;
-  SaveBuf_E496^ := Screen;
+  SaveBuf^ := Screen;
   Color := GetColor;
   GetTextSettings(TS);
   GetFillSettings(FS);
@@ -843,15 +843,15 @@ begin
   SetFillStyle(SolidFill, 0);
   SetColor(13);
   Bar(1, 1, 319, 199);
-  U2823_0031(1, 1, 319, 199, 13);
-  U2823_0031(3, 3, 317, 197, 13);
+  DrawRect(1, 1, 319, 199, 13);
+  DrawRect(3, 3, 317, 197, 13);
   SetColor(15);
   SetTextJustify(CenterText, CenterText);
   OutTextXY(160, 11, 'Control List');
   SetTextJustify(LeftText, CenterText);
   X := 32;
 
-  if Control_E480[g_46C8] = 1 then
+  if Controls[CurPlayer] = 1 then
   begin
     MoveTo(11, 21);
     SetColor(1); OutText('Keyboard:');
@@ -887,7 +887,7 @@ begin
     SetColor(4); OutText('Press player number');
   end;
 
-  if Control_E480[g_46C8] = 2 then
+  if Controls[CurPlayer] = 2 then
   begin
     X := 8;
     MoveTo(11, 21);
@@ -924,7 +924,7 @@ begin
     SetColor(4); OutText('Click on Desired Tank');
   end;
 
-  if Control_E480[g_46C8] = 3 then
+  if Controls[CurPlayer] = 3 then
   begin
     MoveTo(11, 21);
     SetColor(1); OutText('Computer:');
@@ -958,26 +958,26 @@ begin
 
   Done := False;
   repeat
-    if U2968_0077(1) or U2968_0077(2) then Done := True;
-    if g_440A[$39] <> 0 then Done := True;
-    if g_440A[$1C] <> 0 then Done := True;
-    if g_440A[$01] <> 0 then Done := True;
+    if MouseBtnsDown(1) or MouseBtnsDown(2) then Done := True;
+    if KeyDown[$39] <> 0 then Done := True;
+    if KeyDown[$1C] <> 0 then Done := True;
+    if KeyDown[$01] <> 0 then Done := True;
   until Done;
   repeat
     Done := False;
-    if U2968_0077(1) or U2968_0077(2) then Done := True;
-    if g_440A[$39] <> 0 then Done := True;
-    if g_440A[$1C] <> 0 then Done := True;
-    if g_440A[$01] <> 0 then Done := True;
+    if MouseBtnsDown(1) or MouseBtnsDown(2) then Done := True;
+    if KeyDown[$39] <> 0 then Done := True;
+    if KeyDown[$1C] <> 0 then Done := True;
+    if KeyDown[$01] <> 0 then Done := True;
   until not Done;
 
   SetTextJustify(TS.Horiz, TS.Vert);
   SetFillStyle(FS.Color, FS.Pattern);    { sic }
   SetColor(Color);
   SetViewPort(VP.x1, VP.y1, VP.x2, VP.y2, VP.Clip);
-  Screen := SaveBuf_E496^;
-  U2968_004D;
-  U27D4_0027;
+  Screen := SaveBuf^;
+  ShowMouseCursor;
+  ResumeCycling;
 end;
 
 procedure VGA256Driver; external; {$L VGA256.OBJ}

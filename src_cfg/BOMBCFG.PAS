@@ -22,24 +22,24 @@ type
     procedure InitMenuBar; virtual;
     procedure HandleEvent(var Event: TEvent); virtual;
     procedure GetEvent(var Event: TEvent); virtual;
-    procedure M0776;
-    procedure M099B;
-    procedure M0CC2;
-    procedure M12BA;
-    procedure M1681;
-    procedure M18D0;
-    procedure M1B0F;
-    procedure M1D45;
-    procedure M208F;
-    procedure M2587;
-    procedure M28D7;
-    procedure M2C9E;
-    procedure M2EC9(FileVer: TVerStr);
-    procedure M30B1;
-    procedure M3E34;
-    procedure M3F1C;
-    procedure M4319;
-    procedure M43E5(var X: Word; Bit: Word; Value: Boolean);
+    procedure EditSoundOptions;
+    procedure EditNumGames;
+    procedure EditBackground;
+    procedure EditEnvironment;
+    procedure EditShotOptions;
+    procedure EditTankOptions;
+    procedure EditComputerOptions;
+    procedure ShowAboutBox;
+    procedure EditSpeedControls;
+    procedure EditHardware;
+    procedure EditPaletteOptions;
+    procedure ShowCfgNotFound;
+    procedure ShowCfgVersionError(FileVer: TVerStr);
+    procedure RestoreDefaults;
+    procedure ReadCfgFile;
+    procedure WriteCfgFile;
+    procedure SetDefaultOptions;
+    procedure SetOptionBit(var X: Word; Bit: Word; Value: Boolean);
   end;
 
   PMyRadioButtons = ^TMyRadioButtons;
@@ -72,40 +72,40 @@ const
 
 const
   { DS 011E-0125 }
-  Version_011E: string[5] = '3.0'#0;
-  HelpInUse_0124: Boolean = False;
-  c_0125: Byte = 0;                     { not referenced }
+  CfgVersion: string[5] = '3.0'#0;  { DS:011E }
+  HelpInUse: Boolean = False;  { DS:0124 }
+  UnusedByte0125: Byte = 0;                     { DS:0125  not referenced }
 
 var
   { DS 0FB0-111F }
-  MyApp_0FB0: TMyApp;
-  SoundData_0FE8: Word;                 { check boxes: standard, flying }
-  GamesData_0FEA: string[2];            { number of games }
-  BackData_0FEE: record                 { background }
+  MyApp: TMyApp;  { DS:0FB0 }
+  SoundData: Word;                 { DS:0FE8  check boxes: standard, flying }
+  GamesData: string[2];            { DS:0FEA  number of games }
+  BackData: record                 { DS:0FEE  background }
     Which: Word;                        { radio buttons }
     UserSet: Word;                      { check boxes }
   end;
-  EnvData_0FF2: record                  { environment }
+  EnvData: record                  { DS:0FF2  environment }
     Wind: Word;
     Wall: Word;
     Crumble: string[3];
   end;
-  ShotData_0FFA: Word;                  { check boxes: visible, trail }
-  TankData_0FFC: Word;                  { check boxes: -, fall, team }
-  CompData_0FFE: Word;                  { check box: computers buy }
-  HwData_1000: record                   { hardware }
+  ShotData: Word;                  { DS:0FFA  check boxes: visible, trail }
+  TankData: Word;                  { DS:0FFC  check boxes: -, fall, team }
+  CompData: Word;                  { DS:0FFE  check box: computers buy }
+  HwData: record                   { DS:1000  hardware }
     Flags: Word;                        { check boxes: direct video, -, crude palette }
     Mouse: Word;                        { radio buttons }
   end;
-  PalData_1004: record                  { palette }
+  PalData: record                  { DS:1004  palette }
     Iface: Word;                        { radio buttons }
     Speed: string[3];
   end;
-  SpeedData_100A: record                { delays }
+  SpeedData: record                { DS:100A  delays }
     Turret, Fall, Explosion, Projectile: string[3];
   end;
-  Copyright_101A: string;
-  Unused_111A: array[0..5] of Byte;   { not referenced }
+  CfgCopyright: string;  { DS:101A }
+  Unused111A: array[0..5] of Byte;   { DS:111A  not referenced }
 
 {#BOMBCFG_0000}
 function TMyRadioButtons.GetHelpCtx: Word;
@@ -129,8 +129,8 @@ var
 begin
   TApplication.Init;
   RegisterHelpFile;
-  M1D45;
-  M3E34;
+  ShowAboutBox;
+  ReadCfgFile;
 end;
 
 {#BOMBCFG_00A3}
@@ -196,27 +196,27 @@ begin
   if Event.What = evCommand then
   begin
     case Event.Command of
-      cmSound: M0776;
-      cmGames: M099B;
-      cmBackground: M0CC2;
-      cmEnvironment: M12BA;
-      cmShot: M1681;
-      cmTank: M18D0;
-      cmComputers: M1B0F;
-      cmHardware: M2587;
-      cmSpeed: M208F;
-      cmPalette: M28D7;
-      cmLoad: M3E34;
-      cmSave: M3F1C;
+      cmSound: EditSoundOptions;
+      cmGames: EditNumGames;
+      cmBackground: EditBackground;
+      cmEnvironment: EditEnvironment;
+      cmShot: EditShotOptions;
+      cmTank: EditTankOptions;
+      cmComputers: EditComputerOptions;
+      cmHardware: EditHardware;
+      cmSpeed: EditSpeedControls;
+      cmPalette: EditPaletteOptions;
+      cmLoad: ReadCfgFile;
+      cmSave: WriteCfgFile;
       cmSaveExit:
         begin
-          M3F1C;
+          WriteCfgFile;
           E.What := evCommand;
           E.Command := cmQuit;
           E.InfoPtr := @Self;
           PutEvent(E);
         end;
-      cmDefaults: M30B1;
+      cmDefaults: RestoreDefaults;
     else
       Exit;
     end;
@@ -234,9 +234,9 @@ begin
   TApplication.GetEvent(Event);
   case Event.What of
     evCommand:
-      if (Event.Command = cmHelp) and not HelpInUse_0124 then
+      if (Event.Command = cmHelp) and not HelpInUse then
       begin
-        HelpInUse_0124 := True;
+        HelpInUse := True;
         HelpStrm := New(PDosStream, Init('BOMBCFG.HLP', stOpenRead));
         HFile := New(PHelpFile, Init(HelpStrm));
         if HelpStrm^.Status <> stOk then
@@ -254,7 +254,7 @@ begin
           end;
           ClearEvent(Event);
         end;
-        HelpInUse_0124 := False;
+        HelpInUse := False;
       end;
     evMouseDown:
       if Event.Buttons = mbRightButton then
@@ -270,7 +270,7 @@ end;
 
 { Setup/Sound: two check boxes }
 {#BOMBCFG_0776}
-procedure TMyApp.M0776;
+procedure TMyApp.EditSoundOptions;
 var
   D: PDialog;
   R: TRect;
@@ -297,16 +297,16 @@ begin
     R.Assign(3, 2, 25, 3);
     B := New(PLabel, Init(R, 'Sound Toggles', B));
     Insert(B);
-    SetData(SoundData_0FE8);
+    SetData(SoundData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(SoundData_0FE8);
+  if C <> cmCancel then D^.GetData(SoundData);
   Dispose(D, Done);
 end;
 
 { Setup/Number of games: a numeric input line 1..99 }
 {#BOMBCFG_099B}
-procedure TMyApp.M099B;
+procedure TMyApp.EditNumGames;
 var
   D: PDialog;
   R: TRect;
@@ -330,17 +330,17 @@ begin
     R.Assign(2, 2, 23, 3);
     B := New(PLabel, Init(R, 'Type Desired Number:', B));
     Insert(B);
-    SetData(GamesData_0FEA);
+    SetData(GamesData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(GamesData_0FEA);
+  if C <> cmCancel then D^.GetData(GamesData);
   Dispose(D, Done);
 end;
 
 { Setup/Background: one of the backgrounds (radio buttons), and for
   "User Defined" the set to choose from (check boxes) }
 {#BOMBCFG_0CC2}
-procedure TMyApp.M0CC2;
+procedure TMyApp.EditBackground;
 var
   D: PDialog;
   R: TRect;
@@ -396,16 +396,16 @@ begin
     B := New(PLabel, Init(R, 'User Defined:', B));
     Insert(B);
     SelectNext(False);
-    SetData(BackData_0FEE);
+    SetData(BackData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(BackData_0FEE);
+  if C <> cmCancel then D^.GetData(BackData);
   Dispose(D, Done);
-  if BackData_0FEE.Which = 10 then
+  if BackData.Which = 10 then
   begin
     N := 0;
     for I := 0 to 8 do
-      if BackData_0FEE.UserSet and (1 shl I) > 0 then Inc(N);
+      if BackData.UserSet and (1 shl I) > 0 then Inc(N);
     if N = 0 then
     begin
       R.Assign(0, 0, 40, 9);
@@ -429,14 +429,14 @@ begin
       end;
       C := DeskTop^.ExecView(D);
       Dispose(D, Done);
-      M0CC2;
+      EditBackground;
     end;
   end;
 end;
 
 { Options/Environment: wind, walls, crumbling percentage }
 {#BOMBCFG_12BA}
-procedure TMyApp.M12BA;
+procedure TMyApp.EditEnvironment;
 var
   D: PDialog;
   R: TRect;
@@ -485,16 +485,16 @@ begin
     R.Assign(2, 10, 35, 11);
     B := New(PLabel, Init(R, 'Type Desired Crumble Percentage:', B));
     Insert(B);
-    SetData(EnvData_0FF2);
+    SetData(EnvData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(EnvData_0FF2);
+  if C <> cmCancel then D^.GetData(EnvData);
   Dispose(D, Done);
 end;
 
 { Options/Shot Control: two check boxes }
 {#BOMBCFG_1681}
-procedure TMyApp.M1681;
+procedure TMyApp.EditShotOptions;
 var
   D: PDialog;
   R: TRect;
@@ -521,16 +521,16 @@ begin
     R.Assign(3, 2, 20, 3);
     B := New(PLabel, Init(R, 'Shot Toggles', B));
     Insert(B);
-    SetData(ShotData_0FFA);
+    SetData(ShotData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(ShotData_0FFA);
+  if C <> cmCancel then D^.GetData(ShotData);
   Dispose(D, Done);
 end;
 
 { Options/Tank Control: three check boxes }
 {#BOMBCFG_18D0}
-procedure TMyApp.M18D0;
+procedure TMyApp.EditTankOptions;
 var
   D: PDialog;
   R: TRect;
@@ -558,16 +558,16 @@ begin
     R.Assign(3, 2, 20, 3);
     B := New(PLabel, Init(R, 'Tank Toggles', B));
     Insert(B);
-    SetData(TankData_0FFC);
+    SetData(TankData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(TankData_0FFC);
+  if C <> cmCancel then D^.GetData(TankData);
   Dispose(D, Done);
 end;
 
 { Options/Computers: one check box }
 {#BOMBCFG_1B0F}
-procedure TMyApp.M1B0F;
+procedure TMyApp.EditComputerOptions;
 var
   D: PDialog;
   R: TRect;
@@ -593,16 +593,16 @@ begin
     R.Assign(3, 2, 20, 3);
     B := New(PLabel, Init(R, 'Computer Toggle', B));
     Insert(B);
-    SetData(CompData_0FFE);
+    SetData(CompData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(CompData_0FFE);
+  if C <> cmCancel then D^.GetData(CompData);
   Dispose(D, Done);
 end;
 
 { the About box }
 {#BOMBCFG_1D45}
-procedure TMyApp.M1D45;
+procedure TMyApp.ShowAboutBox;
 var
   D: PDialog;
   Dummy: Pointer;
@@ -631,7 +631,7 @@ begin
     R.Grow(-1, 0);
     R.B.Y := R.A.Y + 1;
     R.Move(0, 4);
-    B := New(PStaticText, Init(R, ^C'Version ' + Version_011E));
+    B := New(PStaticText, Init(R, ^C'Version ' + CfgVersion));
     Insert(B);
     GetExtent(R);
     R.Grow(-1, 0);
@@ -652,7 +652,7 @@ end;
 
 { Options/Speed Controls: four delays (numeric input lines) }
 {#BOMBCFG_208F}
-procedure TMyApp.M208F;
+procedure TMyApp.EditSpeedControls;
 var
   D: PDialog;
   R: TRect;
@@ -699,16 +699,16 @@ begin
     R.Assign(30, 8, 40, 10);
     Insert(New(PButton, Init(R, 'Cancel', cmCancel, bfNormal)));
     SelectNext(False);
-    SetData(SpeedData_100A);
+    SetData(SpeedData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(SpeedData_100A);
+  if C <> cmCancel then D^.GetData(SpeedData);
   Dispose(D, Done);
 end;
 
 { Options/Hardware: video/palette check boxes, mouse radio buttons }
 {#BOMBCFG_2587}
-procedure TMyApp.M2587;
+procedure TMyApp.EditHardware;
 var
   D: PDialog;
   R: TRect;
@@ -746,16 +746,16 @@ begin
     R.Assign(40, 2, 55, 3);
     B := New(PLabel, Init(R, 'Mouse Options:', B));
     Insert(B);
-    SetData(HwData_1000);
+    SetData(HwData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(HwData_1000);
+  if C <> cmCancel then D^.GetData(HwData);
   Dispose(D, Done);
 end;
 
 { Options/Palette Control: palette interface and speed }
 {#BOMBCFG_28D7}
-procedure TMyApp.M28D7;
+procedure TMyApp.EditPaletteOptions;
 var
   D: PDialog;
   R: TRect;
@@ -797,16 +797,16 @@ begin
     B := New(PLabel, Init(R, 'Speed (0 Fastest):', L));
     B^.Options := B^.Options or ofCenterX;
     Insert(B);
-    SetData(PalData_1004);
+    SetData(PalData);
   end;
   C := DeskTop^.ExecView(D);
-  if C <> cmCancel then D^.GetData(PalData_1004);
+  if C <> cmCancel then D^.GetData(PalData);
   Dispose(D, Done);
 end;
 
 { "BOMB.CFG not found" message }
 {#BOMBCFG_2C9E}
-procedure TMyApp.M2C9E;
+procedure TMyApp.ShowCfgNotFound;
 var
   D: PDialog;
   R: TRect;
@@ -839,7 +839,7 @@ end;
 
 { "BOMB.CFG has another version" message }
 {#BOMBCFG_2EC9}
-procedure TMyApp.M2EC9(FileVer: TVerStr);
+procedure TMyApp.ShowCfgVersionError(FileVer: TVerStr);
 var
   D: PDialog;
   R: TRect;
@@ -863,7 +863,7 @@ begin
     R.Grow(-3, -3);
     R.Move(0, -1);
     Insert(New(PStaticText, Init(R,
-      ^C'Program Version: ' + Version_011E + #13 + ^C + 'BOMB.CFG Version: ' +
+      ^C'Program Version: ' + CfgVersion + #13 + ^C + 'BOMB.CFG Version: ' +
       FileVer + #13 + #13 +
       '  The located configuration file does not match this version of Tank Wars.  ' +
       'All possible data will be loaded from the file, and it will be rewritten' +
@@ -875,7 +875,7 @@ end;
 
 { Setup/Restore Defaults }
 {#BOMBCFG_30B1}
-procedure TMyApp.M30B1;
+procedure TMyApp.RestoreDefaults;
 var
   D: PDialog;
   R: TRect;
@@ -903,11 +903,11 @@ begin
   end;
   C := DeskTop^.ExecView(D);
   Dispose(D, Done);
-  M4319;
+  SetDefaultOptions;
 end;
 
 { load BOMB.CFG (after setting the defaults) }
-procedure TMyApp.M3E34;
+procedure TMyApp.ReadCfgFile;
 var
   F: File;
   SR: SearchRec;
@@ -920,113 +920,113 @@ var
 {#BOMBCFG_320F} procedure Load25;
   begin
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(SoundData_0FE8, 1, B);
+    if N = 1 then SetOptionBit(SoundData, 1, B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(SoundData_0FE8, 2, B);
-    BlockRead(F, EnvData_0FF2.Wind, 2, N);
+    if N = 1 then SetOptionBit(SoundData, 2, B);
+    BlockRead(F, EnvData.Wind, 2, N);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, EnvData_0FF2.Crumble);
-    BlockRead(F, EnvData_0FF2.Wall, 2, N);
+    if N = 2 then Str(W, EnvData.Crumble);
+    BlockRead(F, EnvData.Wall, 2, N);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(ShotData_0FFA, 1, not B);
+    if N = 1 then SetOptionBit(ShotData, 1, not B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(ShotData_0FFA, 2, B);
+    if N = 1 then SetOptionBit(ShotData, 2, B);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, GamesData_0FEA);
+    if N = 2 then Str(W, GamesData);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(TankData_0FFC, 1, B);
+    if N = 1 then SetOptionBit(TankData, 1, B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(TankData_0FFC, 2, B);
-    BlockRead(F, BackData_0FEE.Which, 2, N);
+    if N = 1 then SetOptionBit(TankData, 2, B);
+    BlockRead(F, BackData.Which, 2, N);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Mouse, 2, not B);
+    if N = 1 then SetOptionBit(HwData.Mouse, 2, not B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Mouse, 1, not B);
+    if N = 1 then SetOptionBit(HwData.Mouse, 1, not B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Flags, 1, B);
+    if N = 1 then SetOptionBit(HwData.Flags, 1, B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Flags, 2, B);
+    if N = 1 then SetOptionBit(HwData.Flags, 2, B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Flags, 3, B);
+    if N = 1 then SetOptionBit(HwData.Flags, 3, B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Flags, 4, B);
+    if N = 1 then SetOptionBit(HwData.Flags, 4, B);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, PalData_1004.Speed);
+    if N = 2 then Str(W, PalData.Speed);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(CompData_0FFE, 1, B);
+    if N = 1 then SetOptionBit(CompData, 1, B);
   end;
 
   { a file of version 3.0 }
 {#BOMBCFG_3762} procedure Load30;
   begin
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(SoundData_0FE8, 1, B);
+    if N = 1 then SetOptionBit(SoundData, 1, B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(SoundData_0FE8, 2, B);
-    BlockRead(F, EnvData_0FF2.Wind, 2, N);
+    if N = 1 then SetOptionBit(SoundData, 2, B);
+    BlockRead(F, EnvData.Wind, 2, N);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, EnvData_0FF2.Crumble);
-    BlockRead(F, EnvData_0FF2.Wall, 2, N);
+    if N = 2 then Str(W, EnvData.Crumble);
+    BlockRead(F, EnvData.Wall, 2, N);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(ShotData_0FFA, 1, not B);
+    if N = 1 then SetOptionBit(ShotData, 1, not B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(ShotData_0FFA, 2, B);
+    if N = 1 then SetOptionBit(ShotData, 2, B);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, GamesData_0FEA);
+    if N = 2 then Str(W, GamesData);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(TankData_0FFC, 2, B);
-    BlockRead(F, BackData_0FEE.Which, 2, N);
-    BlockRead(F, BackData_0FEE.UserSet, 2, N);
+    if N = 1 then SetOptionBit(TankData, 2, B);
+    BlockRead(F, BackData.Which, 2, N);
+    BlockRead(F, BackData.UserSet, 2, N);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Mouse, 2, not B);
+    if N = 1 then SetOptionBit(HwData.Mouse, 2, not B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Mouse, 1, not B);
+    if N = 1 then SetOptionBit(HwData.Mouse, 1, not B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Flags, 1, B);
+    if N = 1 then SetOptionBit(HwData.Flags, 1, B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(PalData_1004.Iface, 2, not B);
+    if N = 1 then SetOptionBit(PalData.Iface, 2, not B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(HwData_1000.Flags, 4, B);
+    if N = 1 then SetOptionBit(HwData.Flags, 4, B);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, PalData_1004.Speed);
+    if N = 2 then Str(W, PalData.Speed);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(CompData_0FFE, 1, B);
+    if N = 1 then SetOptionBit(CompData, 1, B);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, SpeedData_100A.Turret);
+    if N = 2 then Str(W, SpeedData.Turret);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, SpeedData_100A.Fall);
+    if N = 2 then Str(W, SpeedData.Fall);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, SpeedData_100A.Explosion);
+    if N = 2 then Str(W, SpeedData.Explosion);
     BlockRead(F, W, 2, N);
-    if N = 2 then Str(W, SpeedData_100A.Projectile);
+    if N = 2 then Str(W, SpeedData.Projectile);
     BlockRead(F, B, 1, N);
-    if (N = 1) and (PalData_1004.Iface <> 2) then M43E5(PalData_1004.Iface, 1, not B);
+    if (N = 1) and (PalData.Iface <> 2) then SetOptionBit(PalData.Iface, 1, not B);
     BlockRead(F, B, 1, N);
-    if N = 1 then M43E5(TankData_0FFC, 3, B);
+    if N = 1 then SetOptionBit(TankData, 3, B);
   end;
 
 {#BOMBCFG_3E34}
 begin
-  M4319;
+  SetDefaultOptions;
   FindFirst('BOMB.CFG', AnyFile, SR);
   if DosError <> 0 then
-    M2C9E
+    ShowCfgNotFound
   else
   begin
     Assign(F, 'bomb.cfg');
     Reset(F, 1);
     V := 'BADx';
     BlockRead(F, V, 5);
-    if V <> Version_011E then M2EC9(V);
+    if V <> CfgVersion then ShowCfgVersionError(V);
     if V = '2.5'#0 then Load25;
-    if V = Version_011E then Load30;
+    if V = CfgVersion then Load30;
     Close(F);
   end;
 end;
 
 { save BOMB.CFG }
 {#BOMBCFG_3F1C}
-procedure TMyApp.M3F1C;
+procedure TMyApp.WriteCfgFile;
 var
   F: File;
   R: TRect;                     { unused }
@@ -1036,86 +1036,86 @@ var
 begin
   Assign(F, 'bomb.cfg');
   Rewrite(F, 1);
-  BlockWrite(F, Version_011E, 5);
-  B := SoundData_0FE8 and 1 = 1;
+  BlockWrite(F, CfgVersion, 5);
+  B := SoundData and 1 = 1;
   BlockWrite(F, B, 1);
-  B := SoundData_0FE8 and 2 = 2;
+  B := SoundData and 2 = 2;
   BlockWrite(F, B, 1);
-  BlockWrite(F, EnvData_0FF2.Wind, 2);
-  Val(EnvData_0FF2.Crumble, W, Code);
+  BlockWrite(F, EnvData.Wind, 2);
+  Val(EnvData.Crumble, W, Code);
   BlockWrite(F, W, 2);
-  BlockWrite(F, EnvData_0FF2.Wall, 2);
-  B := ShotData_0FFA and 1 <> 1;
+  BlockWrite(F, EnvData.Wall, 2);
+  B := ShotData and 1 <> 1;
   BlockWrite(F, B, 1);
-  B := ShotData_0FFA and 2 = 2;
+  B := ShotData and 2 = 2;
   BlockWrite(F, B, 1);
-  Val(GamesData_0FEA, W, Code);
+  Val(GamesData, W, Code);
   BlockWrite(F, W, 2);
-  B := TankData_0FFC and 2 = 2;
+  B := TankData and 2 = 2;
   BlockWrite(F, B, 1);
-  BlockWrite(F, BackData_0FEE.Which, 2);
-  BlockWrite(F, BackData_0FEE.UserSet, 2);
-  B := HwData_1000.Mouse <> 2;
+  BlockWrite(F, BackData.Which, 2);
+  BlockWrite(F, BackData.UserSet, 2);
+  B := HwData.Mouse <> 2;
   BlockWrite(F, B, 1);
-  B := HwData_1000.Mouse and 1 <> 1;
+  B := HwData.Mouse and 1 <> 1;
   BlockWrite(F, B, 1);
-  B := HwData_1000.Flags and 1 = 1;
+  B := HwData.Flags and 1 = 1;
   BlockWrite(F, B, 1);
-  B := PalData_1004.Iface <> 2;
+  B := PalData.Iface <> 2;
   BlockWrite(F, B, 1);
-  B := HwData_1000.Flags and 8 = 8;
+  B := HwData.Flags and 8 = 8;
   BlockWrite(F, B, 1);
-  Val(PalData_1004.Speed, W, Code);
+  Val(PalData.Speed, W, Code);
   BlockWrite(F, W, 2);
-  B := CompData_0FFE and 1 = 1;
+  B := CompData and 1 = 1;
   BlockWrite(F, B, 1);
-  Val(SpeedData_100A.Turret, W, Code);
+  Val(SpeedData.Turret, W, Code);
   BlockWrite(F, W, 2);
-  Val(SpeedData_100A.Fall, W, Code);
+  Val(SpeedData.Fall, W, Code);
   BlockWrite(F, W, 2);
-  Val(SpeedData_100A.Explosion, W, Code);
+  Val(SpeedData.Explosion, W, Code);
   BlockWrite(F, W, 2);
-  Val(SpeedData_100A.Projectile, W, Code);
+  Val(SpeedData.Projectile, W, Code);
   BlockWrite(F, W, 2);
-  B := PalData_1004.Iface = 0;
+  B := PalData.Iface = 0;
   BlockWrite(F, B, 1);
-  B := TankData_0FFC and 4 = 4;
+  B := TankData and 4 = 4;
   BlockWrite(F, B, 1);
   Close(F);
 end;
 
 { default settings }
 {#BOMBCFG_4319}
-procedure TMyApp.M4319;
+procedure TMyApp.SetDefaultOptions;
 begin
-  SoundData_0FE8 := 1;
-  GamesData_0FEA := '10';
-  BackData_0FEE.Which := 9;
-  BackData_0FEE.UserSet := $FFFF;
-  EnvData_0FF2.Wall := 0;
-  EnvData_0FF2.Wind := 2;
-  EnvData_0FF2.Crumble := '75';
-  ShotData_0FFA := 3;
-  TankData_0FFC := 3;
-  CompData_0FFE := 1;
-  HwData_1000.Mouse := 2;
-  HwData_1000.Flags := 15;
-  PalData_1004.Speed := '0';
-  PalData_1004.Iface := 0;
-  SpeedData_100A.Turret := '8';
-  SpeedData_100A.Fall := '5';
-  SpeedData_100A.Explosion := '8';
-  SpeedData_100A.Projectile := '10';
+  SoundData := 1;
+  GamesData := '10';
+  BackData.Which := 9;
+  BackData.UserSet := $FFFF;
+  EnvData.Wall := 0;
+  EnvData.Wind := 2;
+  EnvData.Crumble := '75';
+  ShotData := 3;
+  TankData := 3;
+  CompData := 1;
+  HwData.Mouse := 2;
+  HwData.Flags := 15;
+  PalData.Speed := '0';
+  PalData.Iface := 0;
+  SpeedData.Turret := '8';
+  SpeedData.Fall := '5';
+  SpeedData.Explosion := '8';
+  SpeedData.Projectile := '10';
 end;
 
 { set (Value) or clear bit number Bit (1 = lowest) of X }
 {#BOMBCFG_43E5}
-procedure TMyApp.M43E5(var X: Word; Bit: Word; Value: Boolean);
+procedure TMyApp.SetOptionBit(var X: Word; Bit: Word; Value: Boolean);
 begin
   if Value then
-    X := X or U2918_00A5(2, Bit - 1)
+    X := X or IntPower(2, Bit - 1)
   else
-    X := X and not U2918_00A5(2, Bit - 1);
+    X := X and not IntPower(2, Bit - 1);
 end;
 
 {$IFDEF KEEPALL}
@@ -1125,9 +1125,9 @@ end;
 {#BOMBCFG_44AE}
 begin
   {$IFDEF KEEPALL} if ParamCount = 9999 then KeepAll; {$ENDIF}
-  Copyright_101A := 'TANK WARS Configuration Copyright 1991, 1992 Kenneth Morse';
-  Copyright_101A := 'All Rights Reserved.';
-  MyApp_0FB0.Init;
-  MyApp_0FB0.Run;
-  MyApp_0FB0.Done;
+  CfgCopyright := 'TANK WARS Configuration Copyright 1991, 1992 Kenneth Morse';
+  CfgCopyright := 'All Rights Reserved.';
+  MyApp.Init;
+  MyApp.Run;
+  MyApp.Done;
 end.

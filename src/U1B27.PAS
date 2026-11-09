@@ -17,15 +17,15 @@ uses
   U2823, U27D4, U27D1, U27B1, U26D4, U26A9,
   U23C3;
 
-procedure U1B27_0000(Color: Integer);
-procedure U1B27_0047(P: Integer);
-procedure U1B27_09EF(N: Integer; var A: TPaths);
-procedure U1B27_0C6F(N: Integer; var A: TPaths);
-procedure U1B27_0DAB(P, Kind: Integer);
-procedure U1B27_1B69(P: Integer);
-procedure U1B27_25D9(P: Integer);
-procedure U1B27_2840(P: Integer);
-procedure U1B27_2902(P: Integer);
+procedure FlashRandomColor(Color: Integer);
+procedure TankDeathNuke(P: Integer);
+procedure AnimDebrisPaths(N: Integer; var A: TPaths);
+procedure PaintDebrisPaths(N: Integer; var A: TPaths);
+procedure TankDeathDebris(P, Kind: Integer);
+procedure TankDeathFunky(P: Integer);
+procedure TankDeathSparks(P: Integer);
+procedure TankDeathPulse(P: Integer);
+procedure TankDeathBlast(P: Integer);
 
 implementation
 
@@ -34,70 +34,70 @@ uses
 
 { flash palette entry Color with 3 random bytes from low memory }
 {#U1B27_0000}
-procedure U1B27_0000(Color: Integer);
+procedure FlashRandomColor(Color: Integer);
 begin
   SetPalBlock(Color, 1, Ptr(0, Random($FFFF)));
 end;
 
 { "nuke": fireballs flying off the tank, then a growing mushroom }
 {#U1B27_0047}
-procedure U1B27_0047(P: Integer);
+procedure TankDeathNuke(P: Integer);
 var
   Color, X, Y, L: Integer;
 begin
   Color := P + 19;
-  for g_4620 := 0 to 4 do
-    SetPalRGB(g_4620 + 130, Trunc((1 - g_4620 / 4) * 63), 0, 0);
-  if g_E788 <> 0 then Sound(Random(500));
-  U1B27_0000(Color);
-  for g_4620 := 0 to 4 do
-    SetPalRGB(g_4620 + 140, 0, Trunc((1 - g_4620 / 4) * 63), 0);
-  if g_E788 <> 0 then Sound(Random(500));
-  U1B27_0000(Color);
-  for g_4620 := 0 to 4 do
-    SetPalRGB(g_4620 + 150, 0, 0, Trunc((1 - g_4620 / 4) * 63));
-  if g_E788 <> 0 then Sound(Random(500));
-  U1B27_0000(Color);
-  for g_4620 := 0 to 100 do
+  for LoopJ := 0 to 4 do
+    SetPalRGB(LoopJ + 130, Trunc((1 - LoopJ / 4) * 63), 0, 0);
+  if SoundOn <> 0 then Sound(Random(500));
+  FlashRandomColor(Color);
+  for LoopJ := 0 to 4 do
+    SetPalRGB(LoopJ + 140, 0, Trunc((1 - LoopJ / 4) * 63), 0);
+  if SoundOn <> 0 then Sound(Random(500));
+  FlashRandomColor(Color);
+  for LoopJ := 0 to 4 do
+    SetPalRGB(LoopJ + 150, 0, 0, Trunc((1 - LoopJ / 4) * 63));
+  if SoundOn <> 0 then Sound(Random(500));
+  FlashRandomColor(Color);
+  for LoopJ := 0 to 100 do
   begin
-    if g_E788 <> 0 then Sound(Random(500));
-    U1B27_0000(Color);
-    Delay(g_E79A);
+    if SoundOn <> 0 then Sound(Random(500));
+    FlashRandomColor(Color);
+    Delay(ExplodeSpeed);
   end;
   NoSound;
   SetViewPort(11, 31, 309, 189, True);
-  U2823_0006;
-  Players_3F0E[P].X := Players_3F0E[P].X - 11;
-  Players_3F0E[P].Y := Players_3F0E[P].Y - 31;
-  for g_4620 := 0 to 10 do
+  FetchClipWindow;
+  Players[P].X := Players[P].X - 11;
+  Players[P].Y := Players[P].Y - 31;
+  for LoopJ := 0 to 10 do
   begin
-    if g_E788 <> 0 then Sound(Random(500));
-    g_4670 := Players_3F0E[P].X;
-    g_4676 := Players_3F0E[P].Y;
-    g_467C := 0.5 - Random;
-    g_4682 := 0.1 - Random;
-    g_462F := 0;
+    if SoundOn <> 0 then Sound(Random(500));
+    ShotX := Players[P].X;
+    ShotY := Players[P].Y;
+    ShotVX := 0.5 - Random;
+    ShotVY := 0.1 - Random;
+    DoneFlag := 0;
     repeat
-      g_4670 := g_4670 + g_467C;
-      g_4676 := g_4676 + g_4682;
-      g_4682 := g_4682 + 0.007;
-      g_467C := g_467C + g_E778 / 5000;
-      X := Trunc(g_4670);
-      Y := Trunc(g_4676);
-      g_462A := GetPixel(X, Y);
-      if (g_462A = 2) or (g_462A = 13) then g_462F := 1;
-      if (g_462A >= 20) and (g_462A <= 29) then
-        U26A9_0004(Random(10) + 5, 0, Players_3F0E[g_462A - 19]);
-      if (X > 320) or (X < 0) or (Y > 200) or (Y < 0) then g_462F := 1;
-      if g_E788 <> 0 then Sound(Trunc((Players_3F0E[P].Y - Y) * 5 + 1500));
-      U1B27_0000(Color);
+      ShotX := ShotX + ShotVX;
+      ShotY := ShotY + ShotVY;
+      ShotVY := ShotVY + 0.007;
+      ShotVX := ShotVX + WindForce / 5000;
+      X := Trunc(ShotX);
+      Y := Trunc(ShotY);
+      TmpC := GetPixel(X, Y);
+      if (TmpC = 2) or (TmpC = 13) then DoneFlag := 1;
+      if (TmpC >= 20) and (TmpC <= 29) then
+        ApplyDamage(Random(10) + 5, 0, Players[TmpC - 19]);
+      if (X > 320) or (X < 0) or (Y > 200) or (Y < 0) then DoneFlag := 1;
+      if SoundOn <> 0 then Sound(Trunc((Players[P].Y - Y) * 5 + 1500));
+      FlashRandomColor(Color);
       PutPixel(X, Y, Color);
-    until g_462F <> 0;
-    DebX_3E9E[g_4620] := X;
-    DebY_3EB4[g_4620] := Y;
-    g_4624 := X;
-    g_4626 := Y;
-    g_4622 := (Trunc(Random(3)) + 3) * 10;
+    until DoneFlag <> 0;
+    DebrisX[LoopJ] := X;
+    DebrisY[LoopJ] := Y;
+    TmpX := X;
+    TmpY := Y;
+    LoopK := (Trunc(Random(3)) + 3) * 10;
     X := Random(10);
     case X of
       0, 1, 2: Y := 1;
@@ -106,141 +106,141 @@ begin
       8: Y := 4;
       9: Y := 5;
     end;
-    DebS_3ECA[g_4620] := Y;
+    DebrisSize[LoopJ] := Y;
     NoSound;
-    for g_4628 := 0 to Y * 4 do
+    for TmpR := 0 to Y * 4 do
     begin
-      if g_E788 <> 0 then Sound(Random(2500));
-      X := g_4622 + 100 + g_4628 div Y;
-      U2823_0351(g_4624, g_4626, g_4628, g_4628, X);
-      U2823_0351(g_4624 + 1, g_4626, g_4628, g_4628, X);
-      Delay(g_E79A);
-      U1B27_0000(Color);
+      if SoundOn <> 0 then Sound(Random(2500));
+      X := LoopK + 100 + TmpR div Y;
+      DrawEllipse(TmpX, TmpY, TmpR, TmpR, X);
+      DrawEllipse(TmpX + 1, TmpY, TmpR, TmpR, X);
+      Delay(ExplodeSpeed);
+      FlashRandomColor(Color);
     end;
     SetColor(0);
-    for g_4628 := Y * 4 downto 0 do
+    for TmpR := Y * 4 downto 0 do
     begin
-      if g_E788 <> 0 then Sound(Random(2500));
-      U2823_0687(g_4624, g_4626, g_4628, g_4628, BackBuf_E49A);
-      U2823_0687(g_4624 + 1, g_4626, g_4628, g_4628, BackBuf_E49A);
-      U1B27_0000(Color);
-      Delay(g_E79A);
+      if SoundOn <> 0 then Sound(Random(2500));
+      CopyEllipse(TmpX, TmpY, TmpR, TmpR, BackBuf);
+      CopyEllipse(TmpX + 1, TmpY, TmpR, TmpR, BackBuf);
+      FlashRandomColor(Color);
+      Delay(ExplodeSpeed);
     end;
   end;
-  g_4628 := 0;
-  for g_4620 := 0 to 4 do
-    for g_4622 := 3 to 5 do
+  TmpR := 0;
+  for LoopJ := 0 to 4 do
+    for LoopK := 3 to 5 do
     begin
-      Inc(g_4628);
-      g_3EE0 := 10 * g_4622 + 100 + g_4620;
-      U2823_0351(Players_3F0E[P].X, Players_3F0E[P].Y, g_4628, g_4628, g_3EE0);
-      U2823_0351(Players_3F0E[P].X + 1, Players_3F0E[P].Y, g_4628, g_4628, g_3EE0);
-      for g_462A := 0 to 4 do
+      Inc(TmpR);
+      ExplColor := 10 * LoopK + 100 + LoopJ;
+      DrawEllipse(Players[P].X, Players[P].Y, TmpR, TmpR, ExplColor);
+      DrawEllipse(Players[P].X + 1, Players[P].Y, TmpR, TmpR, ExplColor);
+      for TmpC := 0 to 4 do
       begin
-        if g_E788 <> 0 then Sound(Random(1300 - 40 * g_4628));
-        U1B27_0000(Color);
+        if SoundOn <> 0 then Sound(Random(1300 - 40 * TmpR));
+        FlashRandomColor(Color);
       end;
-      U2823_0351(Players_3F0E[P].X, Players_3F0E[P].Y, g_4628 + 1, g_4628 + 1, g_3EE0);
-      U2823_0351(Players_3F0E[P].X + 1, Players_3F0E[P].Y, g_4628 + 1, g_4628 + 1, g_3EE0);
-      for g_462A := 0 to 4 do
+      DrawEllipse(Players[P].X, Players[P].Y, TmpR + 1, TmpR + 1, ExplColor);
+      DrawEllipse(Players[P].X + 1, Players[P].Y, TmpR + 1, TmpR + 1, ExplColor);
+      for TmpC := 0 to 4 do
       begin
-        if g_E788 <> 0 then Sound(Random(1300 - 40 * g_4628));
-        U1B27_0000(Color);
+        if SoundOn <> 0 then Sound(Random(1300 - 40 * TmpR));
+        FlashRandomColor(Color);
       end;
-      Inc(g_4628);
-      Delay(g_E79A);
+      Inc(TmpR);
+      Delay(ExplodeSpeed);
     end;
-  g_4628 := 16;
-  for g_4620 := 4 downto 0 do
-    for g_4622 := 4 - g_4620 downto 0 do
+  TmpR := 16;
+  for LoopJ := 4 downto 0 do
+    for LoopK := 4 - LoopJ downto 0 do
     begin
-      Dec(g_4628);
-      if g_E788 <> 0 then Sound(Random(100 * g_4622 + 600));
-      SetPalRGB(Color, g_4628 * Random(63) div 16, g_4628 * Random(63) div 16,
-        g_4628 * Random(63) div 16);
-      L := 63 * g_4622 div 4;
-      SetPalRGB(g_4620 + 130, L, 0, 0);
+      Dec(TmpR);
+      if SoundOn <> 0 then Sound(Random(100 * LoopK + 600));
+      SetPalRGB(Color, TmpR * Random(63) div 16, TmpR * Random(63) div 16,
+        TmpR * Random(63) div 16);
+      L := 63 * LoopK div 4;
+      SetPalRGB(LoopJ + 130, L, 0, 0);
       NoSound;
-      SetPalRGB(g_4620 + 140, 0, L, 0);
-      SetPalRGB(g_4620 + 150, 0, 0, L);
-      Delay(g_E79A);
+      SetPalRGB(LoopJ + 140, 0, L, 0);
+      SetPalRGB(LoopJ + 150, 0, 0, L);
+      Delay(ExplodeSpeed);
     end;
-  for g_4620 := 30 downto 0 do
+  for LoopJ := 30 downto 0 do
   begin
-    U2823_0687(Players_3F0E[P].X, Players_3F0E[P].Y, g_4620, g_4620, BackBuf_E49A);
-    U2823_0687(Players_3F0E[P].X + 1, Players_3F0E[P].Y, g_4620, g_4620, BackBuf_E49A);
+    CopyEllipse(Players[P].X, Players[P].Y, LoopJ, LoopJ, BackBuf);
+    CopyEllipse(Players[P].X + 1, Players[P].Y, LoopJ, LoopJ, BackBuf);
   end;
   NoSound;
   SetViewPort(0, 0, GetMaxX, GetMaxY, True);
-  Players_3F0E[P].X := Players_3F0E[P].X + 11;
-  Players_3F0E[P].Y := Players_3F0E[P].Y + 31;
-  for Color := 1 to g_46B4 do
-    U0098_07A3(Color);
-  U0098_05A9(P + 19, BackBuf_E49A);
-  U0098_0579($82, $9F, BackBuf_E49A);
+  Players[P].X := Players[P].X + 11;
+  Players[P].Y := Players[P].Y + 31;
+  for Color := 1 to NumPlayers do
+    DrawTank(Color);
+  RestoreColorPixels(P + 19, BackBuf);
+  RestoreColorRange($82, $9F, BackBuf);
 end;
 
 { debris pass: walk the N points of the 5 paths, damage tanks hit, plot
   random colours and restore the previous step from the background buffer }
 {#U1B27_09EF}
-procedure U1B27_09EF(N: Integer; var A: TPaths);
+procedure AnimDebrisPaths(N: Integer; var A: TPaths);
 var
   J, I, K, L, C, U1, U2, U3: Integer;
 begin
   for I := 1 to N do
   begin
-    if g_E788 <> 0 then Sound(Random(500) + 100);
+    if SoundOn <> 0 then Sound(Random(500) + 100);
     NoSound;
-    C := U2823_0BFF(A[1, I].X, A[1, I].Y);
+    C := PixelAt(A[1, I].X, A[1, I].Y);
     if (C >= 20) and (C <= 29) then
-      U26A9_0004(Random(3) + 1, 0, Players_3F0E[C - 19]);
-    U2823_0BB6(A[1, I].X, A[1, I].Y, Random(14) + 1);
+      ApplyDamage(Random(3) + 1, 0, Players[C - 19]);
+    PlotPixel(A[1, I].X, A[1, I].Y, Random(14) + 1);
   end;
   for J := 2 to 5 do
     for I := 1 to N do
     begin
-      if g_E788 <> 0 then Sound(Random(500 * J) + 100);
+      if SoundOn <> 0 then Sound(Random(500 * J) + 100);
       NoSound;
-      C := U2823_0BFF(A[J, I].X, A[J, I].Y);
+      C := PixelAt(A[J, I].X, A[J, I].Y);
       if (C >= 20) and (C <= 29) then
-        U26A9_0004(Random(3) + 1, 0, Players_3F0E[C - 19]);
-      U2823_0BB6(A[J, I].X, A[J, I].Y, Random(14) + 1);
-      U2823_0BD8(A[J - 1, I].X, A[J - 1, I].Y, BackBuf_E49A);
+        ApplyDamage(Random(3) + 1, 0, Players[C - 19]);
+      PlotPixel(A[J, I].X, A[J, I].Y, Random(14) + 1);
+      CopyPixel(A[J - 1, I].X, A[J - 1, I].Y, BackBuf);
     end;
   for I := 1 to N do
-    U2823_0BD8(A[5, I].X, A[5, I].Y, BackBuf_E49A);
+    CopyPixel(A[5, I].X, A[5, I].Y, BackBuf);
 end;
 
 { debris variant: paint the paths with random colours 201..214 (202 -> 2) }
 {#U1B27_0C6F}
-procedure U1B27_0C6F(N: Integer; var A: TPaths);
+procedure PaintDebrisPaths(N: Integer; var A: TPaths);
 var
   J, I, K, L, C, T, U1, U2, Col: Integer;
 begin
   for J := 1 to 5 do
     for I := 1 to N do
     begin
-      if g_E788 <> 0 then Sound(Random(500 * J) + 100);
+      if SoundOn <> 0 then Sound(Random(500 * J) + 100);
       NoSound;
-      C := U2823_0BFF(A[J, I].X, A[J, I].Y);
+      C := PixelAt(A[J, I].X, A[J, I].Y);
       T := C - 19;
       if (C >= 20) and (C <= 29) then
-        U26A9_0004(Random(3) + 1, 0, Players_3F0E[T]);
+        ApplyDamage(Random(3) + 1, 0, Players[T]);
       Col := Random(14) + 201;
       if Col = 202 then Col := 2;
-      U2823_0BB6(A[J, I].X, A[J, I].Y, Col);
+      PlotPixel(A[J, I].X, A[J, I].Y, Col);
     end;
 end;
 
 { random debris bursts around the tank }
 {#U1B27_0DAB}
-procedure U1B27_0DAB(P, Kind: Integer);
+procedure TankDeathDebris(P, Kind: Integer);
 var
   J, I, K, Len, Dir, R, U1, U2: Integer;
 begin
-  U2823_0C20(0, 16, PalPtr_DE7C);
-  SetPalBlock(200, 16, PalPtr_DE7C);
-  FillChar(Paths_9FC8, SizeOf(Paths_9FC8), 0);
+  ReadDacBlock(0, 16, FallList);
+  SetPalBlock(200, 16, FallList);
+  FillChar(Paths, SizeOf(Paths), 0);
   for K := 1 to Random(5) + 5 do
   begin
     Len := Random(390) + 2;
@@ -252,10 +252,10 @@ begin
           R := 10 * J;
           for I := 1 to Len do
           begin
-            Paths_9FC8[J, I].Y := Random(R);
-            Paths_9FC8[J, I].X := Trunc(Random(Paths_9FC8[J, I].Y + 10) - Paths_9FC8[J, I].Y / 2 - 5);
-            Paths_9FC8[J, I].Y := Players_3F0E[P].Y - Paths_9FC8[J, I].Y;
-            Paths_9FC8[J, I].X := Players_3F0E[P].X + Paths_9FC8[J, I].X;
+            Paths[J, I].Y := Random(R);
+            Paths[J, I].X := Trunc(Random(Paths[J, I].Y + 10) - Paths[J, I].Y / 2 - 5);
+            Paths[J, I].Y := Players[P].Y - Paths[J, I].Y;
+            Paths[J, I].X := Players[P].X + Paths[J, I].X;
           end;
         end;
       2:
@@ -264,10 +264,10 @@ begin
           R := 10 * J;
           for I := 1 to Len do
           begin
-            Paths_9FC8[J, I].Y := Random(R);
-            Paths_9FC8[J, I].X := Trunc(Random(Paths_9FC8[J, I].Y + 10) - Paths_9FC8[J, I].Y / 2 - 5);
-            Paths_9FC8[J, I].Y := Players_3F0E[P].Y + Paths_9FC8[J, I].Y;
-            Paths_9FC8[J, I].X := Players_3F0E[P].X + Paths_9FC8[J, I].X;
+            Paths[J, I].Y := Random(R);
+            Paths[J, I].X := Trunc(Random(Paths[J, I].Y + 10) - Paths[J, I].Y / 2 - 5);
+            Paths[J, I].Y := Players[P].Y + Paths[J, I].Y;
+            Paths[J, I].X := Players[P].X + Paths[J, I].X;
           end;
         end;
       3:
@@ -276,10 +276,10 @@ begin
           R := 10 * J;
           for I := 1 to Len do
           begin
-            Paths_9FC8[J, I].X := Random(R);
-            Paths_9FC8[J, I].Y := Trunc(Random(Paths_9FC8[J, I].X + 10) - Paths_9FC8[J, I].X / 2 - 5);
-            Paths_9FC8[J, I].Y := Players_3F0E[P].Y - Paths_9FC8[J, I].Y;
-            Paths_9FC8[J, I].X := Players_3F0E[P].X + Paths_9FC8[J, I].X;
+            Paths[J, I].X := Random(R);
+            Paths[J, I].Y := Trunc(Random(Paths[J, I].X + 10) - Paths[J, I].X / 2 - 5);
+            Paths[J, I].Y := Players[P].Y - Paths[J, I].Y;
+            Paths[J, I].X := Players[P].X + Paths[J, I].X;
           end;
         end;
       4:
@@ -288,10 +288,10 @@ begin
           R := 10 * J;
           for I := 1 to Len do
           begin
-            Paths_9FC8[J, I].X := Random(R);
-            Paths_9FC8[J, I].Y := Trunc(Random(Paths_9FC8[J, I].X + 10) - Paths_9FC8[J, I].X / 2 - 5);
-            Paths_9FC8[J, I].Y := Players_3F0E[P].Y - Paths_9FC8[J, I].Y;
-            Paths_9FC8[J, I].X := Players_3F0E[P].X - Paths_9FC8[J, I].X;
+            Paths[J, I].X := Random(R);
+            Paths[J, I].Y := Trunc(Random(Paths[J, I].X + 10) - Paths[J, I].X / 2 - 5);
+            Paths[J, I].Y := Players[P].Y - Paths[J, I].Y;
+            Paths[J, I].X := Players[P].X - Paths[J, I].X;
           end;
         end;
       5:
@@ -300,10 +300,10 @@ begin
           R := 10 * J;
           for I := 1 to Len do
           begin
-            Paths_9FC8[J, I].Y := Random(R);
-            Paths_9FC8[J, I].X := Trunc(Random(Paths_9FC8[J, I].Y + 10) - Paths_9FC8[J, I].Y / 2 - 5);
-            Paths_9FC8[J, I].X := Players_3F0E[P].X + Paths_9FC8[J, I].X + Paths_9FC8[J, I].Y;
-            Paths_9FC8[J, I].Y := Players_3F0E[P].Y - Paths_9FC8[J, I].Y;
+            Paths[J, I].Y := Random(R);
+            Paths[J, I].X := Trunc(Random(Paths[J, I].Y + 10) - Paths[J, I].Y / 2 - 5);
+            Paths[J, I].X := Players[P].X + Paths[J, I].X + Paths[J, I].Y;
+            Paths[J, I].Y := Players[P].Y - Paths[J, I].Y;
           end;
         end;
       6:
@@ -312,10 +312,10 @@ begin
           R := 10 * J;
           for I := 1 to Len do
           begin
-            Paths_9FC8[J, I].Y := Random(R);
-            Paths_9FC8[J, I].X := Trunc(Random(Paths_9FC8[J, I].Y + 10) - Paths_9FC8[J, I].Y / 2 - 5);
-            Paths_9FC8[J, I].X := Players_3F0E[P].X + Paths_9FC8[J, I].X - Paths_9FC8[J, I].Y;
-            Paths_9FC8[J, I].Y := Players_3F0E[P].Y - Paths_9FC8[J, I].Y;
+            Paths[J, I].Y := Random(R);
+            Paths[J, I].X := Trunc(Random(Paths[J, I].Y + 10) - Paths[J, I].Y / 2 - 5);
+            Paths[J, I].X := Players[P].X + Paths[J, I].X - Paths[J, I].Y;
+            Paths[J, I].Y := Players[P].Y - Paths[J, I].Y;
           end;
         end;
       7:
@@ -324,10 +324,10 @@ begin
           R := 10 * J;
           for I := 1 to Len do
           begin
-            Paths_9FC8[J, I].Y := Random(R);
-            Paths_9FC8[J, I].X := Trunc(Random(Paths_9FC8[J, I].Y + 10) - Paths_9FC8[J, I].Y / 2 - 5);
-            Paths_9FC8[J, I].X := Players_3F0E[P].X + Paths_9FC8[J, I].X + Paths_9FC8[J, I].Y;
-            Paths_9FC8[J, I].Y := Players_3F0E[P].Y + Paths_9FC8[J, I].Y;
+            Paths[J, I].Y := Random(R);
+            Paths[J, I].X := Trunc(Random(Paths[J, I].Y + 10) - Paths[J, I].Y / 2 - 5);
+            Paths[J, I].X := Players[P].X + Paths[J, I].X + Paths[J, I].Y;
+            Paths[J, I].Y := Players[P].Y + Paths[J, I].Y;
           end;
         end;
       8:
@@ -336,278 +336,278 @@ begin
           R := 10 * J;
           for I := 1 to Len do
           begin
-            Paths_9FC8[J, I].Y := Random(R);
-            Paths_9FC8[J, I].X := Trunc(Random(Paths_9FC8[J, I].Y + 10) - Paths_9FC8[J, I].Y / 2 - 5);
-            Paths_9FC8[J, I].X := Players_3F0E[P].X + Paths_9FC8[J, I].X - Paths_9FC8[J, I].Y;
-            Paths_9FC8[J, I].Y := Players_3F0E[P].Y + Paths_9FC8[J, I].Y;
+            Paths[J, I].Y := Random(R);
+            Paths[J, I].X := Trunc(Random(Paths[J, I].Y + 10) - Paths[J, I].Y / 2 - 5);
+            Paths[J, I].X := Players[P].X + Paths[J, I].X - Paths[J, I].Y;
+            Paths[J, I].Y := Players[P].Y + Paths[J, I].Y;
           end;
         end;
     end;
     for J := 1 to 5 do
       for I := 1 to Len do
       begin
-        if Paths_9FC8[J, I].X > 309 then Paths_9FC8[J, I].X := 618 - Paths_9FC8[J, I].X;
-        if Paths_9FC8[J, I].Y > 189 then Paths_9FC8[J, I].Y := 378 - Paths_9FC8[J, I].Y;
-        if Paths_9FC8[J, I].Y < 31 then Paths_9FC8[J, I].Y := 62 - Paths_9FC8[J, I].Y;
-        if Paths_9FC8[J, I].X < 11 then Paths_9FC8[J, I].X := 22 - Paths_9FC8[J, I].X;
+        if Paths[J, I].X > 309 then Paths[J, I].X := 618 - Paths[J, I].X;
+        if Paths[J, I].Y > 189 then Paths[J, I].Y := 378 - Paths[J, I].Y;
+        if Paths[J, I].Y < 31 then Paths[J, I].Y := 62 - Paths[J, I].Y;
+        if Paths[J, I].X < 11 then Paths[J, I].X := 22 - Paths[J, I].X;
       end;
     case Kind of
-      0: U1B27_09EF(Len, Paths_9FC8);
-      1: U1B27_0C6F(Len, Paths_9FC8);
+      0: AnimDebrisPaths(Len, Paths);
+      1: PaintDebrisPaths(Len, Paths);
     end;
   end;
-  for R := 1 to g_46B4 do
-    U0098_07A3(R);
-  U0098_08C2(P);
-  U0098_0579($C9, $DC, BackBuf_E49A);
+  for R := 1 to NumPlayers do
+    DrawTank(R);
+  EraseTank(P);
+  RestoreColorRange($C9, $DC, BackBuf);
 end;
 
 { "funky bomb" style: 11 fireballs at once, each ending in a fireball }
 {#U1B27_1B69}
-procedure U1B27_1B69(P: Integer);
+procedure TankDeathFunky(P: Integer);
 var
   Color, X, Y, L: Integer;
   PX, PY, VX, VY: array[0..10] of Real;
   Done: array[0..11] of Boolean;   { one more than needed (frame layout) }
 begin
   Color := P + 19;
-  for g_4620 := 0 to 4 do
-    SetPalRGB(g_4620 + 130, Trunc((1 - g_4620 / 4) * 63), 0, 0);
-  if g_E788 <> 0 then Sound(Random(500));
-  U1B27_0000(Color);
-  for g_4620 := 0 to 4 do
-    SetPalRGB(g_4620 + 140, 0, Trunc((1 - g_4620 / 4) * 63), 0);
-  if g_E788 <> 0 then Sound(Random(500));
-  U1B27_0000(Color);
-  for g_4620 := 0 to 4 do
-    SetPalRGB(g_4620 + 150, 0, 0, Trunc((1 - g_4620 / 4) * 63));
-  if g_E788 <> 0 then Sound(Random(500));
-  U1B27_0000(Color);
-  for g_4620 := 0 to 100 do
+  for LoopJ := 0 to 4 do
+    SetPalRGB(LoopJ + 130, Trunc((1 - LoopJ / 4) * 63), 0, 0);
+  if SoundOn <> 0 then Sound(Random(500));
+  FlashRandomColor(Color);
+  for LoopJ := 0 to 4 do
+    SetPalRGB(LoopJ + 140, 0, Trunc((1 - LoopJ / 4) * 63), 0);
+  if SoundOn <> 0 then Sound(Random(500));
+  FlashRandomColor(Color);
+  for LoopJ := 0 to 4 do
+    SetPalRGB(LoopJ + 150, 0, 0, Trunc((1 - LoopJ / 4) * 63));
+  if SoundOn <> 0 then Sound(Random(500));
+  FlashRandomColor(Color);
+  for LoopJ := 0 to 100 do
   begin
-    if g_E788 <> 0 then Sound(Random(500));
-    U1B27_0000(Color);
-    Delay(g_E79A);
+    if SoundOn <> 0 then Sound(Random(500));
+    FlashRandomColor(Color);
+    Delay(ExplodeSpeed);
   end;
   NoSound;
   SetViewPort(11, 31, 309, 189, True);
-  U2823_0006;
-  Players_3F0E[P].X := Players_3F0E[P].X - 11;
-  Players_3F0E[P].Y := Players_3F0E[P].Y - 31;
-  for g_4620 := 0 to 10 do
+  FetchClipWindow;
+  Players[P].X := Players[P].X - 11;
+  Players[P].Y := Players[P].Y - 31;
+  for LoopJ := 0 to 10 do
   begin
-    if g_E788 <> 0 then Sound(Random(500));
-    PX[g_4620] := Players_3F0E[P].X;
-    PY[g_4620] := Players_3F0E[P].Y;
-    VX[g_4620] := 0.5 - Random;
-    VY[g_4620] := 0.1 - Random;
-    Done[g_4620] := False;
+    if SoundOn <> 0 then Sound(Random(500));
+    PX[LoopJ] := Players[P].X;
+    PY[LoopJ] := Players[P].Y;
+    VX[LoopJ] := 0.5 - Random;
+    VY[LoopJ] := 0.1 - Random;
+    Done[LoopJ] := False;
   end;
   repeat
-    g_462F := 1;
-    U1B27_0000(Color);
-    for g_4620 := 0 to 10 do
-      if not Done[g_4620] then
+    DoneFlag := 1;
+    FlashRandomColor(Color);
+    for LoopJ := 0 to 10 do
+      if not Done[LoopJ] then
       begin
-        PX[g_4620] := PX[g_4620] + VX[g_4620];
-        PY[g_4620] := PY[g_4620] + VY[g_4620];
-        VY[g_4620] := VY[g_4620] + 0.007;
-        VX[g_4620] := VX[g_4620] + g_E778 / 5000;
-        X := Trunc(PX[g_4620]);
-        Y := Trunc(PY[g_4620]);
-        g_462F := 0;
-        g_462A := GetPixel(X, Y);
-        if (g_462A = 2) or (g_462A = 13) then Done[g_4620] := True;
-        if (g_462A >= 20) and (g_462A <= 29) then
-          U26A9_0004(Random(10) + 10, 0, Players_3F0E[g_462A - 19]);
-        if (X > 298) or (X < 0) or (Y > 158) or (Y < 0) then Done[g_4620] := True;
-        if g_E788 <> 0 then Sound(Trunc((Players_3F0E[P].Y - Y) * 5 + 1500));
+        PX[LoopJ] := PX[LoopJ] + VX[LoopJ];
+        PY[LoopJ] := PY[LoopJ] + VY[LoopJ];
+        VY[LoopJ] := VY[LoopJ] + 0.007;
+        VX[LoopJ] := VX[LoopJ] + WindForce / 5000;
+        X := Trunc(PX[LoopJ]);
+        Y := Trunc(PY[LoopJ]);
+        DoneFlag := 0;
+        TmpC := GetPixel(X, Y);
+        if (TmpC = 2) or (TmpC = 13) then Done[LoopJ] := True;
+        if (TmpC >= 20) and (TmpC <= 29) then
+          ApplyDamage(Random(10) + 10, 0, Players[TmpC - 19]);
+        if (X > 298) or (X < 0) or (Y > 158) or (Y < 0) then Done[LoopJ] := True;
+        if SoundOn <> 0 then Sound(Trunc((Players[P].Y - Y) * 5 + 1500));
         PutPixel(X, Y, Color);
-        if Done[g_4620] then
+        if Done[LoopJ] then
         begin
-          DebX_3E9E[g_4620] := X;
-          DebY_3EB4[g_4620] := Y;
+          DebrisX[LoopJ] := X;
+          DebrisY[LoopJ] := Y;
         end;
       end;
-  until g_462F <> 0;
-  for g_4620 := 0 to 10 do
+  until DoneFlag <> 0;
+  for LoopJ := 0 to 10 do
   begin
-    g_4624 := DebX_3E9E[g_4620];
-    g_4626 := DebY_3EB4[g_4620];
-    g_4622 := (Trunc(Random(3)) + 3) * 10;
-    g_462A := Random(10);
-    case g_462A of
-      0, 1, 2: g_462C := 1;
-      3, 4, 5: g_462C := 2;
-      6, 7: g_462C := 3;
-      8: g_462C := 4;
-      9: g_462C := 5;
+    TmpX := DebrisX[LoopJ];
+    TmpY := DebrisY[LoopJ];
+    LoopK := (Trunc(Random(3)) + 3) * 10;
+    TmpC := Random(10);
+    case TmpC of
+      0, 1, 2: TmpN := 1;
+      3, 4, 5: TmpN := 2;
+      6, 7: TmpN := 3;
+      8: TmpN := 4;
+      9: TmpN := 5;
     end;
-    for g_4628 := 0 to g_462C * 4 do
+    for TmpR := 0 to TmpN * 4 do
     begin
-      if g_E788 <> 0 then Sound(Random(2500));
-      U1B27_0000(Color);
-      g_3EE0 := g_4622 + 100 + g_4628 div g_462C;
-      U2823_0351(g_4624, g_4626, g_4628, g_4628, g_3EE0);
-      U2823_0351(g_4624 + 1, g_4626, g_4628, g_4628, g_3EE0);
-      Delay(g_E79A);
+      if SoundOn <> 0 then Sound(Random(2500));
+      FlashRandomColor(Color);
+      ExplColor := LoopK + 100 + TmpR div TmpN;
+      DrawEllipse(TmpX, TmpY, TmpR, TmpR, ExplColor);
+      DrawEllipse(TmpX + 1, TmpY, TmpR, TmpR, ExplColor);
+      Delay(ExplodeSpeed);
     end;
-    for g_4628 := g_462C * 4 downto 0 do
+    for TmpR := TmpN * 4 downto 0 do
     begin
-      if g_E788 <> 0 then Sound(Random(2500));
-      U1B27_0000(Color);
-      U2823_0687(g_4624, g_4626, g_4628, g_4628, BackBuf_E49A);
-      U2823_0687(g_4624 + 1, g_4626, g_4628, g_4628, BackBuf_E49A);
-      Delay(g_E79A);
+      if SoundOn <> 0 then Sound(Random(2500));
+      FlashRandomColor(Color);
+      CopyEllipse(TmpX, TmpY, TmpR, TmpR, BackBuf);
+      CopyEllipse(TmpX + 1, TmpY, TmpR, TmpR, BackBuf);
+      Delay(ExplodeSpeed);
     end;
   end;
-  g_4628 := 0;
-  for g_4620 := 0 to 4 do
-    for g_4622 := 3 to 5 do
+  TmpR := 0;
+  for LoopJ := 0 to 4 do
+    for LoopK := 3 to 5 do
     begin
-      Inc(g_4628);
-      g_3EE0 := 10 * g_4622 + 100 + g_4620;
-      U2823_0351(Players_3F0E[P].X, Players_3F0E[P].Y, g_4628, g_4628, g_3EE0);
-      for g_462A := 0 to 4 do
+      Inc(TmpR);
+      ExplColor := 10 * LoopK + 100 + LoopJ;
+      DrawEllipse(Players[P].X, Players[P].Y, TmpR, TmpR, ExplColor);
+      for TmpC := 0 to 4 do
       begin
-        if g_E788 <> 0 then Sound(Random(1300 - 40 * g_4628));
-        U1B27_0000(Color);
+        if SoundOn <> 0 then Sound(Random(1300 - 40 * TmpR));
+        FlashRandomColor(Color);
       end;
-      U2823_0351(Players_3F0E[P].X, Players_3F0E[P].Y, g_4628 + 1, g_4628 + 1, g_3EE0);
-      for g_462A := 0 to 4 do
+      DrawEllipse(Players[P].X, Players[P].Y, TmpR + 1, TmpR + 1, ExplColor);
+      for TmpC := 0 to 4 do
       begin
-        if g_E788 <> 0 then Sound(Random(1300 - 40 * g_4628));
-        U1B27_0000(Color);
+        if SoundOn <> 0 then Sound(Random(1300 - 40 * TmpR));
+        FlashRandomColor(Color);
       end;
-      Delay(g_E79A);
-      Inc(g_4628);
+      Delay(ExplodeSpeed);
+      Inc(TmpR);
     end;
-  g_4628 := 16;
-  for g_4620 := 4 downto 0 do
-    for g_4622 := 4 - g_4620 downto 0 do
+  TmpR := 16;
+  for LoopJ := 4 downto 0 do
+    for LoopK := 4 - LoopJ downto 0 do
     begin
-      Dec(g_4628);
-      if g_E788 <> 0 then Sound(Random(200));
-      SetPalRGB(Color, g_4628 * Random(63) div 16, g_4628 * Random(63) div 16,
-        g_4628 * Random(63) div 16);
-      L := 63 * g_4622 div 4;
-      SetPalRGB(g_4620 + 130, L, 0, 0);
+      Dec(TmpR);
+      if SoundOn <> 0 then Sound(Random(200));
+      SetPalRGB(Color, TmpR * Random(63) div 16, TmpR * Random(63) div 16,
+        TmpR * Random(63) div 16);
+      L := 63 * LoopK div 4;
+      SetPalRGB(LoopJ + 130, L, 0, 0);
       NoSound;
-      SetPalRGB(g_4620 + 140, 0, L, 0);
-      SetPalRGB(g_4620 + 150, 0, 0, L);
-      Delay(g_E79A);
+      SetPalRGB(LoopJ + 140, 0, L, 0);
+      SetPalRGB(LoopJ + 150, 0, 0, L);
+      Delay(ExplodeSpeed);
     end;
-  for g_4620 := 30 downto 0 do
+  for LoopJ := 30 downto 0 do
   begin
-    U2823_0687(Players_3F0E[P].X, Players_3F0E[P].Y, g_4620, g_4620, BackBuf_E49A);
-    U2823_0687(Players_3F0E[P].X + 1, Players_3F0E[P].Y, g_4620, g_4620, BackBuf_E49A);
+    CopyEllipse(Players[P].X, Players[P].Y, LoopJ, LoopJ, BackBuf);
+    CopyEllipse(Players[P].X + 1, Players[P].Y, LoopJ, LoopJ, BackBuf);
   end;
   SetViewPort(0, 0, GetMaxX, GetMaxY, True);
-  Players_3F0E[P].X := Players_3F0E[P].X + 11;
-  Players_3F0E[P].Y := Players_3F0E[P].Y + 31;
-  for Color := 1 to g_46B4 do
-    U0098_07A3(Color);
-  U0098_05A9(P + 19, BackBuf_E49A);
-  U0098_0579($82, $9A, BackBuf_E49A);
+  Players[P].X := Players[P].X + 11;
+  Players[P].Y := Players[P].Y + 31;
+  for Color := 1 to NumPlayers do
+    DrawTank(Color);
+  RestoreColorPixels(P + 19, BackBuf);
+  RestoreColorRange($82, $9A, BackBuf);
 end;
 
 { sparks: 30..59 rings of random dirt pixels (colour 2) around the tank }
 {#U1B27_25D9}
-procedure U1B27_25D9(P: Integer);
+procedure TankDeathSparks(P: Integer);
 var
   R, U1, U2, K, I, U3: Integer;
 begin
-  for g_462A := 1 to Random(30) + 30 do
+  for TmpC := 1 to Random(30) + 30 do
   begin
-    R := 10 * g_462A;
+    R := 10 * TmpC;
     for I := 1 to Random(400) do
     begin
-      Paths_9FC8[1, I].Y := Random(R);
-      Paths_9FC8[1, I].X := Trunc(Random(Paths_9FC8[1, I].Y + 10) - Paths_9FC8[1, I].Y / 2 - 5);
-      Paths_9FC8[1, I].Y := Players_3F0E[P].Y - Paths_9FC8[1, I].Y;
-      Paths_9FC8[1, I].X := Players_3F0E[P].X + Paths_9FC8[1, I].X;
-      while (Paths_9FC8[1, I].X > 309) or (Paths_9FC8[1, I].Y < 31) or
-        (Paths_9FC8[1, I].X < 11) or (Paths_9FC8[1, I].Y > 189) do
+      Paths[1, I].Y := Random(R);
+      Paths[1, I].X := Trunc(Random(Paths[1, I].Y + 10) - Paths[1, I].Y / 2 - 5);
+      Paths[1, I].Y := Players[P].Y - Paths[1, I].Y;
+      Paths[1, I].X := Players[P].X + Paths[1, I].X;
+      while (Paths[1, I].X > 309) or (Paths[1, I].Y < 31) or
+        (Paths[1, I].X < 11) or (Paths[1, I].Y > 189) do
       begin
-        if Paths_9FC8[1, I].X > 309 then Paths_9FC8[1, I].X := 618 - Paths_9FC8[1, I].X;
-        if Paths_9FC8[1, I].Y > 189 then Paths_9FC8[1, I].Y := 378 - Paths_9FC8[1, I].Y;
-        if Paths_9FC8[1, I].Y < 31 then Paths_9FC8[1, I].Y := 62 - Paths_9FC8[1, I].Y;
-        if Paths_9FC8[1, I].X < 11 then Paths_9FC8[1, I].X := 22 - Paths_9FC8[1, I].X;
+        if Paths[1, I].X > 309 then Paths[1, I].X := 618 - Paths[1, I].X;
+        if Paths[1, I].Y > 189 then Paths[1, I].Y := 378 - Paths[1, I].Y;
+        if Paths[1, I].Y < 31 then Paths[1, I].Y := 62 - Paths[1, I].Y;
+        if Paths[1, I].X < 11 then Paths[1, I].X := 22 - Paths[1, I].X;
       end;
-      U2823_0BB6(Paths_9FC8[1, I].X, Paths_9FC8[1, I].Y, 2);
-      if g_E788 <> 0 then Sound(100 * g_462A + Random(1000));
+      PlotPixel(Paths[1, I].X, Paths[1, I].Y, 2);
+      if SoundOn <> 0 then Sound(100 * TmpC + Random(1000));
     end;
   end;
   NoSound;
-  for K := 1 to g_46B4 do
-    U0098_07A3(K);
-  U0098_08C2(P);
+  for K := 1 to NumPlayers do
+    DrawTank(K);
+  EraseTank(P);
 end;
 
-{ U26A9_0175 counted 0..100..0 with a rising/falling tone, then -1 }
+{ SetPlayerMen counted 0..100..0 with a rising/falling tone, then -1 }
 {#U1B27_2840}
-procedure U1B27_2840(P: Integer);
+procedure TankDeathPulse(P: Integer);
 var
   U1, U2, U3, U4, U5, U6, I, U7, U8: Integer;
 begin
-  U0098_07A3(P);
+  DrawTank(P);
   for I := 0 to 100 do
   begin
-    U26A9_0175(I, Players_3F0E[P]);
-    if g_E788 <> 0 then Sound(100 * I + 2000);
-    Delay(g_E79A);
+    SetPlayerMen(I, Players[P]);
+    if SoundOn <> 0 then Sound(100 * I + 2000);
+    Delay(ExplodeSpeed);
   end;
   for I := 100 downto 0 do
   begin
-    U26A9_0175(I, Players_3F0E[P]);
-    if g_E788 <> 0 then Sound(100 * I + 2000);
-    Delay(g_E79A);
+    SetPlayerMen(I, Players[P]);
+    if SoundOn <> 0 then Sound(100 * I + 2000);
+    Delay(ExplodeSpeed);
   end;
   NoSound;
-  U26A9_0175(-1, Players_3F0E[P]);
-  U0098_08C2(P);
+  SetPlayerMen(-1, Players[P]);
+  EraseTank(P);
 end;
 
 { like 2840, then 1..4 explosions of weapon 1..4 at the tank's position
   (fired by the dummy player 0) }
 {#U1B27_2902}
-procedure U1B27_2902(P: Integer);
+procedure TankDeathBlast(P: Integer);
 var
   U1, U2, U3, U4, U5, U6, I, J, K, D: Integer;
 begin
-  D := g_E79A;
+  D := ExplodeSpeed;
   if Random(2) = 1 then D := 0;
-  U0098_07A3(P);
+  DrawTank(P);
   for J := 1 to 3 do
     for I := 0 to 100 do
     begin
-      U26A9_0175(I, Players_3F0E[P]);
-      if g_E788 <> 0 then Sound(100 * I + 2000);
+      SetPlayerMen(I, Players[P]);
+      if SoundOn <> 0 then Sound(100 * I + 2000);
       Delay(D);
     end;
   for I := 100 downto 1 do
   begin
-    U26A9_0175(I, Players_3F0E[P]);
-    if g_E788 <> 0 then Sound(100 * I + 2000);
+    SetPlayerMen(I, Players[P]);
+    if SoundOn <> 0 then Sound(100 * I + 2000);
     Delay(D);
   end;
-  Players_3F0E[0] := Players_3F0E[P];
-  g_4628 := Random(10);
-  case g_4628 of
-    0..1: g_462A := 1;
-    2..4: g_462A := 2;
-    5..7: g_462A := 3;
-    8..9: g_462A := 4;
+  Players[0] := Players[P];
+  TmpR := Random(10);
+  case TmpR of
+    0..1: TmpC := 1;
+    2..4: TmpC := 2;
+    5..7: TmpC := 3;
+    8..9: TmpC := 4;
   end;
-  for K := 1 to g_462A do
+  for K := 1 to TmpC do
   begin
-    Players_3F0E[0].Weapon := K;
-    U1DD4_0108(0, Players_3F0E[0].X, Players_3F0E[0].Y, 2);
-    for I := 1 to g_46B4 do
-      U0098_07A3(I);
+    Players[0].Weapon := K;
+    WeaponImpact(0, Players[0].X, Players[0].Y, 2);
+    for I := 1 to NumPlayers do
+      DrawTank(I);
   end;
   NoSound;
-  U26A9_0175(-1, Players_3F0E[P]);
+  SetPlayerMen(-1, Players[P]);
 end;
 
 end.

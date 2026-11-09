@@ -1,7 +1,7 @@
 {$A+,B-,D+,F+,G-,I-,L+,N-,E+,O-,R-,S-,V+,X+}
 unit U2918;
 
-{ NOTE: this unit needs $A+ (the 9-byte ViewPortType locals in U2918_003D/0066
+{ NOTE: this unit needs $A+ (the 9-byte ViewPortType locals in ViewCenterX/0066
   sit at [bp-0Ch], i.e. word aligned). }
 
 { Misc. helpers: PIC mask save/restore, viewport helpers, software Real
@@ -18,132 +18,132 @@ uses
 
 var
   { DS E7E2-E81F }
-  g_E7E2: Integer;      { font id EURO }
-  g_E7E4: Integer;      { font id LCOM }
-  g_E7E6: Integer;      { font id SCRI }
-  g_E7E8: Integer;      { font id SIMP }
-  g_E7EA: Integer;      { font id TSCR }
-  g_E7EC: Integer;      { font id TINY }
-  g_E7EE: Integer;      { driver id vga256 }
-  g_E7F0: array[0..40] of Byte;
-  g_E819: Byte;         { saved PIC1 mask }
-  g_E81A: Byte;         { saved port 81h }
-  g_E81B: Byte;
-  g_E81C: Pointer;      { saved ExitProc }
+  FontEuro: Integer;      { DS:E7E2  font id EURO }
+  FontLcom: Integer;      { DS:E7E4  font id LCOM }
+  FontScri: Integer;      { DS:E7E6  font id SCRI }
+  FontSimp: Integer;      { DS:E7E8  font id SIMP }
+  FontTscr: Integer;      { DS:E7EA  font id TSCR }
+  FontTiny: Integer;      { DS:E7EC  font id TINY }
+  DriverVga256: Integer;      { DS:E7EE  driver id vga256 }
+  UnusedE7F0: array[0..40] of Byte;  { DS:E7F0 }
+  SavedPicMask: Byte;         { DS:E819  saved PIC1 mask }
+  SavedPort81: Byte;         { DS:E81A  saved port 81h }
+  UnusedE81B: Byte;  { DS:E81B }
+  MiscOldExitProc: Pointer;      { DS:E81C  saved ExitProc }
 
-procedure U2918_0000;
-procedure U2918_000F;
-procedure U2918_001E;
-function  U2918_003D: Integer;
-function  U2918_0066: Integer;
-function  U2918_008F(A, B: Real): Real;
-function  U2918_00D9(R: Real): Real;
-function  U2918_011B(R: Real): Real;
-function  U2918_015D: Integer;
-function  U2918_016F: Char;
-procedure U2918_01A1;
-function  U2918_022A: Integer;
-function  U2918_0256: Integer;
-procedure U2918_0286;
-function  U2918_00A5(A, B: Real): Integer;
-function  U2918_02FE(L: LongInt): string;
-function  U2918_0337(S: string): string;
-procedure U2918_03A9;
-function  U2918_04A3: Integer;
+procedure SavePicMasks;
+procedure RestorePicMasks;
+procedure FullViewport;
+function  ViewCenterX: Integer;
+function  ViewCenterY: Integer;
+function  VecLength(A, B: Real): Real;
+function  DegToRad(R: Real): Real;
+function  RadToDeg(R: Real): Real;
+function  DetectVga256: Integer;
+function  WaitKey: Char;
+procedure WaitKeyOrMouse;
+function  MouseX: Integer;
+function  MouseY: Integer;
+procedure CheckGraphError;
+function  IntPower(A, B: Real): Integer;
+function  IntToStr(L: LongInt): string;
+function  UpperStr(S: string): string;
+procedure MiscExitProc;
+function  CpuType: Integer;
 
 implementation
 
 { save interrupt masks }
 {#U2918_0000}
-procedure U2918_0000;
+procedure SavePicMasks;
 begin
-  g_E819 := Port[$21];
-  g_E81A := Port[$81];
+  SavedPicMask := Port[$21];
+  SavedPort81 := Port[$81];
 end;
 
 { restore interrupt masks }
 {#U2918_000F}
-procedure U2918_000F;
+procedure RestorePicMasks;
 begin
-  Port[$21] := g_E819;
-  Port[$81] := g_E81A;
+  Port[$21] := SavedPicMask;
+  Port[$81] := SavedPort81;
 end;
 
 { full screen viewport }
 {#U2918_001E}
-procedure U2918_001E;
+procedure FullViewport;
 begin
   SetViewPort(0, 0, GetMaxX, GetMaxY, True);
 end;
 
 { horizontal centre of the viewport (viewport relative) }
 {#U2918_003D}
-function U2918_003D: Integer;
+function ViewCenterX: Integer;
 var
   VP: ViewPortType;
 begin
   GetViewSettings(VP);
-  U2918_003D := (VP.x1 + VP.x2) div 2 - VP.x1;
+  ViewCenterX := (VP.x1 + VP.x2) div 2 - VP.x1;
 end;
 
 { vertical centre of the viewport (viewport relative) }
 {#U2918_0066}
-function U2918_0066: Integer;
+function ViewCenterY: Integer;
 var
   VP: ViewPortType;
 begin
   GetViewSettings(VP);
-  U2918_0066 := (VP.y1 + VP.y2) div 2 - VP.y1;
+  ViewCenterY := (VP.y1 + VP.y2) div 2 - VP.y1;
 end;
 
 { length of vector (A, B) }
 {#U2918_008F}
-function U2918_008F(A, B: Real): Real;
+function VecLength(A, B: Real): Real;
 begin
-  U2918_008F := Sqrt(Sqr(A) + Sqr(B));
+  VecLength := Sqrt(Sqr(A) + Sqr(B));
 end;
 
 { degrees -> radians }
 {#U2918_00D9}
-function U2918_00D9(R: Real): Real;
+function DegToRad(R: Real): Real;
 begin
-  U2918_00D9 := R / 180 * Pi;
+  DegToRad := R / 180 * Pi;
 end;
 
 { radians -> degrees }
 {#U2918_011B}
-function U2918_011B(R: Real): Real;
+function RadToDeg(R: Real): Real;
 begin
-  U2918_011B := R / Pi * 180;
+  RadToDeg := R / Pi * 180;
 end;
 
 { detect function for InstallUserDriver }
 {#U2918_015D}
-function U2918_015D: Integer;
+function DetectVga256: Integer;
 begin
-  U2918_015D := 1;
+  DetectVga256 := 1;
 end;
 
 { wait for a key; Esc quits }
 {#U2918_016F}
-function U2918_016F: Char;
+function WaitKey: Char;
 var
   C: Char;
 begin
   repeat until KeyPressed;
   C := ReadKey;
   if C = #27 then Halt(10);
-  U2918_016F := C;
+  WaitKey := C;
 end;
 
 { wait for a key or mouse button; Esc / right button quits }
 {#U2918_01A1}
-procedure U2918_01A1;
+procedure WaitKeyOrMouse;
 var
   C: Char;
 begin
   C := #0;
-  if g_E820 = 0 then
+  if MouseEnabled = 0 then
   begin
     repeat until KeyPressed;
     C := ReadKey;
@@ -151,8 +151,8 @@ begin
   end
   else
   begin
-    repeat until KeyPressed or U2968_0077(1) or U2968_0077(2);
-    if U2968_0077(2) then C := #27;
+    repeat until KeyPressed or MouseBtnsDown(1) or MouseBtnsDown(2);
+    if MouseBtnsDown(2) then C := #27;
     if KeyPressed then C := ReadKey;
     if C = #27 then Halt(10);
   end;
@@ -160,21 +160,21 @@ end;
 
 { mouse x scaled to 320 }
 {#U2918_022A}
-function U2918_022A: Integer;
+function MouseX: Integer;
 begin
-  U2918_022A := Trunc(Integer(U2968_0067) / 2);
+  MouseX := Trunc(Integer(MouseRawX) / 2);
 end;
 
 { mouse y }
 {#U2918_0256}
-function U2918_0256: Integer;
+function MouseY: Integer;
 begin
-  U2918_0256 := U2968_006F;
+  MouseY := MouseRawY;
 end;
 
 { abort on graphics error }
 {#U2918_0286}
-procedure U2918_0286;
+procedure CheckGraphError;
 var
   Err: Integer;
 begin
@@ -192,37 +192,37 @@ end;
 { A to the power of B (truncated).  Only BOMBCFG.EXE uses it (smart-linked
   out of BOMB.EXE), so its marker carries its offset in BOMBCFG.EXE. }
 {#U2918_00A5}
-function U2918_00A5(A, B: Real): Integer;
+function IntPower(A, B: Real): Integer;
 begin
-  U2918_00A5 := Trunc(Exp(Ln(A) * B));
+  IntPower := Trunc(Exp(Ln(A) * B));
 end;
 
 { LongInt -> string }
 {#U2918_02FE}
-function U2918_02FE(L: LongInt): string;
+function IntToStr(L: LongInt): string;
 var
   S: string;
 begin
   Str(L, S);
-  U2918_02FE := S;
+  IntToStr := S;
 end;
 
 { upper-case a string }
 {#U2918_0337}
-function U2918_0337(S: string): string;
+function UpperStr(S: string): string;
 var
   I: Integer;
 begin
   for I := 1 to Length(S) do
     S[I] := UpCase(S[I]);
-  U2918_0337 := S;
+  UpperStr := S;
 end;
 
 { exit procedure }
 {#U2918_03A9}
-procedure U2918_03A9;
+procedure MiscExitProc;
 begin
-  ExitProc := g_E81C;
+  ExitProc := MiscOldExitProc;
 end;
 
 { CPU type detection.  Returns $56 (8086), $BA (80186), $11E (80286),
@@ -250,31 +250,31 @@ end;
   @exit: pop bp; pop cx; popf; retf
 }
 {#U2918_04A3}
-function U2918_04A3: Integer; external; {$L CPUID.OBJ}
+function CpuType: Integer; external; {$L CPUID.OBJ}
 
 {#U2918_03E1}
 begin
-  g_E7EE := 0;
-  g_E7EE := InstallUserDriver('vga256', @U2918_015D);
-  U2918_0286;
-  g_E7E2 := 0;
-  g_E7E2 := InstallUserFont('EURO');
-  U2918_0286;
-  g_E7E4 := 0;
-  g_E7E4 := InstallUserFont('LCOM');
-  U2918_0286;
-  g_E7E6 := 0;
-  g_E7E6 := InstallUserFont('SCRI');
-  U2918_0286;
-  g_E7E8 := 0;
-  g_E7E8 := InstallUserFont('SIMP');
-  U2918_0286;
-  g_E7EA := 0;
-  g_E7EA := InstallUserFont('TSCR');
-  U2918_0286;
-  g_E7EC := 0;
-  g_E7EC := InstallUserFont('TINY');
-  U2918_0286;
-  g_E81C := ExitProc;
-  ExitProc := @U2918_03A9;
+  DriverVga256 := 0;
+  DriverVga256 := InstallUserDriver('vga256', @DetectVga256);
+  CheckGraphError;
+  FontEuro := 0;
+  FontEuro := InstallUserFont('EURO');
+  CheckGraphError;
+  FontLcom := 0;
+  FontLcom := InstallUserFont('LCOM');
+  CheckGraphError;
+  FontScri := 0;
+  FontScri := InstallUserFont('SCRI');
+  CheckGraphError;
+  FontSimp := 0;
+  FontSimp := InstallUserFont('SIMP');
+  CheckGraphError;
+  FontTscr := 0;
+  FontTscr := InstallUserFont('TSCR');
+  CheckGraphError;
+  FontTiny := 0;
+  FontTiny := InstallUserFont('TINY');
+  CheckGraphError;
+  MiscOldExitProc := ExitProc;
+  ExitProc := @MiscExitProc;
 end.

@@ -15,15 +15,15 @@ uses
 {#BOMB_0000}
 procedure BombExit;
 begin
-  if g_E7AE <> 0 then U27D4_03A7;
-  if g_460A <> 0 then U27B1_00E5;
-  if g_E78B <> 0 then
+  if CycInstalled <> 0 then RemovePalCycler;
+  if KbdInstalled <> 0 then RemoveKeyboard;
+  if MouseIn <> 0 then
   begin
-    U0728_06B1;
-    g_462F := U2968_003B;
+    InitMouseCursor;
+    DoneFlag := DetectMouse;
   end;
-  U2918_000F;
-  ExitProc := g_46F8;
+  RestorePicMasks;
+  ExitProc := BombOldExitProc;
 end;
 
 {$IFDEF KEEPALL}
@@ -33,27 +33,27 @@ end;
 {#BOMB_0102}
 begin
   {$IFDEF KEEPALL} if ParamCount = 9999 then KeepAll; {$ENDIF}
-  g_46CA := 'TANK WARS Copyright 1990, 1991, 1992 Kenneth Morse';
-  g_46CA := 'All Rights Reserved.';
-  g_E795 := 0;
-  U0728_05D8;
-  U0728_62E4;
-  U2918_0000;
+  TmpStr := 'TANK WARS Copyright 1990, 1991, 1992 Kenneth Morse';
+  TmpStr := 'All Rights Reserved.';
+  DebugMode := 0;
+  ShowCpuType;
+  LoadSettings;
+  SavePicMasks;
   Randomize;
   TextMode(CO80);
   TextBackground(Black);
   TextColor(Yellow);
   ClrScr;
-  if g_E795 <> 0 then U0098_0226('EXITPROC INSTALL');
-  g_46F8 := ExitProc;
+  if DebugMode <> 0 then DebugTrace('EXITPROC INSTALL');
+  BombOldExitProc := ExitProc;
   ExitProc := @BombExit;
-  if g_E795 <> 0 then U0098_0226('REGISTER DRIVER');
+  if DebugMode <> 0 then DebugTrace('REGISTER DRIVER');
   if RegisterBGIdriver(@VGA256Driver) < 0 then
   begin
     Writeln('Error registering driver: ', GraphErrorMsg(GraphResult));
     Halt(1);
   end;
-  if g_E795 <> 0 then U0098_0226('REGISTER FONTS');
+  if DebugMode <> 0 then DebugTrace('REGISTER FONTS');
   if RegisterBGIfont(@EuroFont) < 0 then
   begin
     Writeln(GraphErrorMsg(GraphResult));
@@ -69,29 +69,29 @@ begin
     Writeln(GraphErrorMsg(GraphResult));
     Halt(1);
   end;
-  FillChar(g_440A, $200, 0);
-  if g_E795 <> 0 then U0098_0226('INSTALL XKEY');
-  U27B1_007D(True, @U2390_021B);
-  if g_E795 <> 0 then U0098_0226('MOUSE');
-  if g_E790 <> 0 then
+  FillChar(KeyDown, $200, 0);
+  if DebugMode <> 0 then DebugTrace('INSTALL XKEY');
+  InstallKeyboard(True, @HotKeyHook);
+  if DebugMode <> 0 then DebugTrace('MOUSE');
+  if ForceMouse <> 0 then
   begin
-    U2968_002E(g_E78B);
-    if g_E78B <> 0 then U2968_0047;
+    SetMouseEnabled(MouseIn);
+    if MouseIn <> 0 then ResetMouse;
   end
   else
-    U0728_04D0;
-  if g_E78B <> 0 then U0728_06B1;
-  if g_E795 <> 0 then U0098_0226('INITGRAPH');
-  g_461E := Detect;
-  InitGraph(g_461E, g_461E, '');
-  U2823_0000;
-  if g_E795 <> 0 then U0098_0226('CYCLER');
-  if g_E786 <> 0 then U27D4_0244(g_E793);
-  if g_E795 <> 0 then U0098_0226('TITLE');
-  if (g_E78E <> 0) or (g_E794 <> 0) then U0040_0014;
-  U0728_3BC3;
-  U0E9B_7523;
-  U23C3_2E0B;
+    CheckMouse;
+  if MouseIn <> 0 then InitMouseCursor;
+  if DebugMode <> 0 then DebugTrace('INITGRAPH');
+  LoopI := Detect;
+  InitGraph(LoopI, LoopI, '');
+  SetMode13h;
+  if DebugMode <> 0 then DebugTrace('CYCLER');
+  if PaletteOn <> 0 then InstallPalCycler(PalUseRetrace);
+  if DebugMode <> 0 then DebugTrace('TITLE');
+  if (ShowTitle <> 0) or (BeginnerGame <> 0) then ShowTitleScreen;
+  SetupGame;
+  PlayGames;
+  FreeComputers;
   CloseGraph;
-  U0E9B_7242;
+  PrintFinalResults;
 end.

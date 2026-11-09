@@ -2,8 +2,8 @@
 unit U27B1;
 
 { Keyboard handler: own INT 9 handler that keeps a key-down table
-  (g_440A[scancode], extended keys at +$100), optionally chains to the
-  BIOS handler, and calls a per-key hook (g_4614). }
+  (KeyDown[scancode], extended keys at +$100), optionally chains to the
+  BIOS handler, and calls a per-key hook (KbdHook). }
 
 interface
 
@@ -14,20 +14,20 @@ uses
   Graph, Crt, Dos, Printer, U2968, U2918,
   U2823, U27D4, U27D1;
 
-procedure U27B1_0000; interrupt;
-procedure U27B1_007D(Chain: Boolean; Hook: Pointer);
-procedure U27B1_00E5;
-procedure U27B1_010C;
-procedure U27B1_014E;
-function  U27B1_0190: Boolean;
-procedure U27B1_01AE(Hook: Pointer);
-function  U27B1_01C2: Pointer;
+procedure KeyboardIsr; interrupt;
+procedure InstallKeyboard(Chain: Boolean; Hook: Pointer);
+procedure RemoveKeyboard;
+procedure DisableBiosKeys;
+procedure EnableBiosKeys;
+function  BiosKeysEnabled: Boolean;
+procedure SetKeyHook(Hook: Pointer);
+function  GetKeyHook: Pointer;
 
 implementation
 
 { INT 9 handler (entry is at 0000: the interrupt prologue pushes) }
 {#U27B1_0000}
-procedure U27B1_0000;
+procedure KeyboardIsr;
 begin
   asm
     sti
@@ -35,27 +35,27 @@ begin
     in al, 60h
     cmp al, 0E0h
     jne @make
-    mov word ptr [g_4612], 100h
+    mov word ptr [KbdExtOffset], 100h
     jmp @chain
   @make:
     test al, 80h
     jne @break
     mov bx, ax
-    add bx, word ptr [g_4612]
-    mov word ptr [g_4612], 0
-    mov byte ptr [bx+offset g_440A], 1
+    add bx, word ptr [KbdExtOffset]
+    mov word ptr [KbdExtOffset], 0
+    mov byte ptr [bx+offset KeyDown], 1
     jmp @chain
   @break:
     and al, 7Fh
     mov bx, ax
-    add bx, word ptr [g_4612]
-    mov word ptr [g_4612], 0
-    mov byte ptr [bx+offset g_440A], 0
+    add bx, word ptr [KbdExtOffset]
+    mov word ptr [KbdExtOffset], 0
+    mov byte ptr [bx+offset KeyDown], 0
   @chain:
-    cmp byte ptr [g_4610], 1
+    cmp byte ptr [KbdChainBios], 1
     jne @eoi
     pushf
-    call dword ptr [g_460C]
+    call dword ptr [OldInt9]
     jmp @done
   @eoi:
     cli
@@ -63,46 +63,46 @@ begin
     out 20h, al
   @done:
     sti
-    cmp word ptr [g_4614], 0
+    cmp word ptr [KbdHook], 0
     jne @hook
-    cmp word ptr [g_4614+2], 0
+    cmp word ptr [KbdHook+2], 0
     jne @hook
     jmp @end
   @hook:
-    call dword ptr [g_4614]
+    call dword ptr [KbdHook]
   @end:
   end;
 end;
 
 { install the keyboard handler }
 {#U27B1_007D}
-procedure U27B1_007D(Chain: Boolean; Hook: Pointer);
+procedure InstallKeyboard(Chain: Boolean; Hook: Pointer);
 begin
-  if g_460A <> 0 then Exit;
-  FillChar(g_440A, $200, 0);
-  GetIntVec(9, g_460C);
-  g_4610 := Byte(Chain);
+  if KbdInstalled <> 0 then Exit;
+  FillChar(KeyDown, $200, 0);
+  GetIntVec(9, OldInt9);
+  KbdChainBios := Byte(Chain);
   Word(Ptr($40, $1A)^) := Word(Ptr($40, $1C)^);
-  SetIntVec(9, @U27B1_0000);
-  g_460A := 1;
-  g_4614 := Hook;
+  SetIntVec(9, @KeyboardIsr);
+  KbdInstalled := 1;
+  KbdHook := Hook;
 end;
 
 { remove the keyboard handler }
 {#U27B1_00E5}
-procedure U27B1_00E5;
+procedure RemoveKeyboard;
 begin
-  if g_460A = 0 then Exit;
-  U27B1_014E;
-  SetIntVec(9, g_460C);
-  g_460A := 0;
+  if KbdInstalled = 0 then Exit;
+  EnableBiosKeys;
+  SetIntVec(9, OldInt9);
+  KbdInstalled := 0;
 end;
 
 { stop chaining to the BIOS; flush BIOS buffer, clear shift states }
 {#U27B1_010C}
-procedure U27B1_010C;
+procedure DisableBiosKeys;
 begin
-  g_4610 := 0;
+  KbdChainBios := 0;
   Word(Ptr($40, $1A)^) := Word(Ptr($40, $1C)^);
   Mem[$40:$17] := Mem[$40:$17] and $F0;
   Mem[$40:$18] := 0;
@@ -110,38 +110,38 @@ end;
 
 { flush BIOS buffer, clear shift states, chain to the BIOS again }
 {#U27B1_014E}
-procedure U27B1_014E;
+procedure EnableBiosKeys;
 begin
   Word(Ptr($40, $1A)^) := Word(Ptr($40, $1C)^);
   Mem[$40:$17] := Mem[$40:$17] and $F0;
   Mem[$40:$18] := 0;
-  g_4610 := 1;
+  KbdChainBios := 1;
 end;
 
 { chaining to the BIOS? }
 {#U27B1_0190}
-function U27B1_0190: Boolean;
+function BiosKeysEnabled: Boolean;
 begin
-  if g_4610 = 0 then
-    U27B1_0190 := False
+  if KbdChainBios = 0 then
+    BiosKeysEnabled := False
   else
-    U27B1_0190 := True;
+    BiosKeysEnabled := True;
 end;
 
 {#U27B1_01AE}
-procedure U27B1_01AE(Hook: Pointer);
+procedure SetKeyHook(Hook: Pointer);
 begin
-  g_4614 := Hook;
+  KbdHook := Hook;
 end;
 
 {#U27B1_01C2}
-function U27B1_01C2: Pointer;
+function GetKeyHook: Pointer;
 begin
-  U27B1_01C2 := g_4614;
+  GetKeyHook := KbdHook;
 end;
 
 {#U27B1_01DF}
 begin
-  g_460A := 0;
-  g_4614 := nil;
+  KbdInstalled := 0;
+  KbdHook := nil;
 end.

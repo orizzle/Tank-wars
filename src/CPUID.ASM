@@ -1,4 +1,4 @@
-; CPU detection used by U2918_04A3 (function: Integer, far).
+; CPU detection used by CpuType (function: Integer, far).
 ; Hand-written assembler in the original (TASM-style encodings), linked as an
 ; external.  Returns 86 ($56) for 8086/88, 186 ($BA) for 80186, 286 ($11E) for
 ; 80286, 386 ($182) for 80386+; negative if the CPU runs in protected mode.

@@ -84,8 +84,8 @@ begin
     R.Grow(-3, -3);
     R.Move(0, -1);
     Insert(New(PStaticText, Init(R,
-      ^C'  You must enter a numeric integer between ' + U2918_02FE(Min) +
-      ' and ' + U2918_02FE(Max) + '.' +
+      ^C'  You must enter a numeric integer between ' + IntToStr(Min) +
+      ' and ' + IntToStr(Max) + '.' +
       '  Failure to do so will result in this annoying box appearing again!')));
   end;
   C := DeskTop^.ExecView(D);

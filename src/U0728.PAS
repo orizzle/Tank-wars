@@ -17,41 +17,41 @@ type
 var
   { names of the computer players: typed constant array in GLOBALS
     (DS 007C..087B, only partly typed there yet) }
-  AINames_007C: array[0..7] of String absolute c_007C;
+  AINames: array[0..7] of String absolute AIName0;  { DS:007C }
 
 type
-  { per-player block of $7DA bytes, cleared by U0728_0216 (structure unknown;
+  { per-player block of $7DA bytes, cleared by ResetPlayer (structure unknown;
     array[1..10] at DS 5134, indexed from 0 at DS 495A) }
   T7DA = array[0..$7D9] of Byte;
 
 var
-  Rec_495A: array[0..10] of T7DA absolute g_495A;
+  ShotLogRecs: array[0..10] of T7DA absolute ShotLogData;  { DS:495A }
 
-function U0728_0007(B: Boolean): string;
-function U0728_0043(B: Boolean): string;
-procedure U0728_0078(I: Integer);
-procedure U0728_0216(I: Integer);
-procedure U0728_04D0;
-procedure U0728_05D8;
-procedure U0728_06B1;
-procedure U0728_06D1;
-procedure U0728_07CE;
-procedure U0728_08E6;
-procedure U0728_09B5;
-function U0728_0DEF(N: Integer): string;
-function U0728_0F3B(N: Integer): string;
-function U0728_0FFC(N: Integer): string;
-procedure U0728_1186;
-procedure U0728_1DD5;
-procedure U0728_2609;
-procedure U0728_302C(T: Integer);
-procedure U0728_3449;
-procedure U0728_3A10(Kind: Integer);
-procedure U0728_3BC3;
-procedure U0728_4183(P: Word);
-procedure U0728_46AC(P: Word);
-procedure U0728_5083;
-procedure U0728_62E4;
+function YesNoStr(B: Boolean): string;
+function OnOffStr(B: Boolean): string;
+procedure CreateAIPlayer(I: Integer);
+procedure ResetPlayer(I: Integer);
+procedure CheckMouse;
+procedure ShowCpuType;
+procedure InitMouseCursor;
+procedure DrawTitleBox;
+procedure DrawStartButton;
+procedure DrawMainMenuHeader;
+procedure SoundOptionsDialog;
+function BackgroundName(N: Integer): string;
+function WallTypeName(N: Integer): string;
+function WindForceName(N: Integer): string;
+procedure GameOptionsDialog;
+procedure RunMainMenu;
+procedure TeamSetupScreen;
+procedure EditTeamName(T: Integer);
+procedure BuildTeams;
+procedure DrawMenuBackground(Kind: Integer);
+procedure SetupGame;
+procedure EditPlayerName(P: Word);
+procedure SelectAIType(P: Word);
+procedure PlayerSetupScreen;
+procedure LoadSettings;
 
 implementation
 

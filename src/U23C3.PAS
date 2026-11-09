@@ -2,7 +2,7 @@
 unit U23C3;
 
 { Computer players.  Each AI type is an object; instances live in
-  Tanks_3EE2[] (U27D1) and are created by U0728_0078 according to the
+  Tanks[] (U27D1) and are created by CreateAIPlayer according to the
   player's name ('Mr. Stupid', 'Lobber', ...).  Think is called once per
   frame and returns the next "key" to press:
     1/2 = turn turret, 3/4 = power down/up, 5 = fire, 6 = flip direction,
@@ -37,7 +37,7 @@ type
     destructor Done; virtual;
     procedure Save(var F: File);
     procedure Load(var F: File);
-    function GetF0E: Integer;
+    function BuyStrategy: Integer;
     function GetTarget: Integer;
     procedure SetPlayer(APlayer: Integer);
     function Steer: Integer;
@@ -89,7 +89,7 @@ type
     function Think: Integer; virtual;
   end;
 
-procedure U23C3_2E0B;
+procedure FreeComputers;
 
 implementation
 
@@ -103,7 +103,7 @@ type
 
 var
   Screen: TScreen absolute $A000:0;
-  ShotLog: array[0..10] of array[0..200] of TShot absolute g_495A;
+  ShotLog: array[0..10] of array[0..200] of TShot absolute ShotLogData;
 
 {#U23C3_0000}
 constructor TComputer.Init(Allowed: TByteSet);
@@ -115,8 +115,8 @@ begin
   Dir := 0;
   f0B := 0;
   Target := -1;
-  g_4688 := -1;
-  g_468E := -1;
+  AIUnknown4688 := -1;
+  AIUnknown468E := -1;
   repeat
     f0E := Random(4) + 1;
   until f0E in Allowed;
@@ -151,9 +151,9 @@ begin
 end;
 
 {#U23C3_018D}
-function TComputer.GetF0E: Integer;
+function TComputer.BuyStrategy: Integer;
 begin
-  GetF0E := f0E;
+  BuyStrategy := f0E;
 end;
 
 {#U23C3_01A6}
@@ -175,39 +175,39 @@ function TComputer.Steer: Integer;
 var
   Key: Integer;
 begin
-  while Players_3F0E[Player].Ammo[Weapon] < 1 do
+  while Players[Player].Ammo[Weapon] < 1 do
   begin
     Dec(Weapon);
     if Weapon < 0 then
       Weapon := 12;
   end;
-  if 10 * Players_3F0E[Player].Men < Power then
-    Power := 10 * Players_3F0E[Player].Men;
-  if (Weapon = 5) and (Players_3F0E[Player].Ammo[5] < Power) then
-    Power := Players_3F0E[Player].Ammo[5];
+  if 10 * Players[Player].Men < Power then
+    Power := 10 * Players[Player].Men;
+  if (Weapon = 5) and (Players[Player].Ammo[5] < Power) then
+    Power := Players[Player].Ammo[5];
   if Power < 0 then
     Power := 0;
   Key := 5;
-  if Players_3F0E[Player].f1D < Angle then
-    Key := 1 - Trunc((Players_3F0E[Player].f1F - 1) / 2);
-  if Players_3F0E[Player].f1D > Angle then
-    Key := Trunc((Players_3F0E[Player].f1F - 1) / 2) + 2;
-  if Players_3F0E[Player].f1B > Power then
+  if Players[Player].f1D < Angle then
+    Key := 1 - Trunc((Players[Player].f1F - 1) / 2);
+  if Players[Player].f1D > Angle then
+    Key := Trunc((Players[Player].f1F - 1) / 2) + 2;
+  if Players[Player].f1B > Power then
     Key := 3;
-  if Players_3F0E[Player].f1B < Power then
+  if Players[Player].f1B < Power then
     Key := 4;
-  if Players_3F0E[Player].f1F <> Dir then
+  if Players[Player].f1F <> Dir then
     Key := 6;
-  if Players_3F0E[Player].Weapon <> Weapon then
+  if Players[Player].Weapon <> Weapon then
     Key := 8;
-  if (Key = 3) and (Players_3F0E[Player].f1B - Power > 99) then
-    Players_3F0E[Player].f1B := Players_3F0E[Player].f1B - 90;
-  if (Key = 3) and (Players_3F0E[Player].f1B - Power > 9) then
-    Players_3F0E[Player].f1B := Players_3F0E[Player].f1B - 9;
-  if (Key = 4) and (Power - Players_3F0E[Player].f1B > 99) then
-    Players_3F0E[Player].f1B := Players_3F0E[Player].f1B + 90;
-  if (Key = 4) and (Power - Players_3F0E[Player].f1B > 9) then
-    Players_3F0E[Player].f1B := Players_3F0E[Player].f1B + 9;
+  if (Key = 3) and (Players[Player].f1B - Power > 99) then
+    Players[Player].f1B := Players[Player].f1B - 90;
+  if (Key = 3) and (Players[Player].f1B - Power > 9) then
+    Players[Player].f1B := Players[Player].f1B - 9;
+  if (Key = 4) and (Power - Players[Player].f1B > 99) then
+    Players[Player].f1B := Players[Player].f1B + 90;
+  if (Key = 4) and (Power - Players[Player].f1B > 9) then
+    Players[Player].f1B := Players[Player].f1B + 9;
   if Key = 5 then
     Ready := False;
   Steer := Key;
@@ -234,10 +234,10 @@ begin
   begin
     Weapon := 11;
     for i := 1 to 4 do
-      if Players_3F0E[Player].Ammo[i] > 0 then
+      if Players[Player].Ammo[i] > 0 then
         Weapon := i;
     Angle := Random(90);
-    if g_46C6 in [1, 2, 3] then
+    if RoundWall in [1, 2, 3] then
     begin
       repeat
         Dir := Trunc(Random(3)) - 1;
@@ -246,7 +246,7 @@ begin
     end
     else
     begin
-      if g_46B4 div 2 >= Player then
+      if NumPlayers div 2 >= Player then
         Dir := 1
       else
         Dir := -1;
@@ -283,57 +283,57 @@ begin
     if Abs(Dir) <> 1 then
       Dir := 1;
     j := Dir;
-    if (Players_3F0E[Player].f5E = 1) and (Random <= 0.5) then
+    if (Players[Player].f5E = 1) and (Random <= 0.5) then
       j := -j;
-    if Players_3F0E[Player].f5E < 3 then
+    if Players[Player].f5E < 3 then
     begin
       repeat
         Target := Target + j;
-        if Target > g_46B4 then
+        if Target > NumPlayers then
           Target := 1;
         if Target < 1 then
-          Target := g_46B4;
-      until (Players_3F0E[Target].f23 <> 0) and (Player <> Target) and
-            (Players_3F0E[Player].Team <> Players_3F0E[Target].Team);
+          Target := NumPlayers;
+      until (Players[Target].f23 <> 0) and (Player <> Target) and
+            (Players[Player].Team <> Players[Target].Team);
     end
     else
-      for i := 1 to g_46B4 do
-        if (Abs(ShotLog[Player][Players_3F0E[Player].f5E - 1].HitX - Players_3F0E[i].X) < L) and
-           (i <> Player) and (Players_3F0E[i].f23 <> 0) and
-           (Players_3F0E[Player].Team <> Players_3F0E[i].Team) then
+      for i := 1 to NumPlayers do
+        if (Abs(ShotLog[Player][Players[Player].f5E - 1].HitX - Players[i].X) < L) and
+           (i <> Player) and (Players[i].f23 <> 0) and
+           (Players[Player].Team <> Players[i].Team) then
         begin
           Target := i;
-          L := Abs(ShotLog[Player][Players_3F0E[Player].f5E - 1].HitX - Players_3F0E[i].X);
+          L := Abs(ShotLog[Player][Players[Player].f5E - 1].HitX - Players[i].X);
         end;
   end;
-  if Target > g_46B4 then
+  if Target > NumPlayers then
     Target := 1;
   if ((Target > Player) and (Dir = -1)) or ((Target < Player) and (Dir = 1)) then
-    Players_3F0E[Player].f5E := 1;
+    Players[Player].f5E := 1;
   if Target > Player then
     Dir := 1
   else
     Dir := -1;
-  if (Players_3F0E[Player].f5E = 1) and not Ready then
+  if (Players[Player].f5E = 1) and not Ready then
   begin
     Angle := 75;
     Power := Random(100) + 100;
     Ready := True;
   end;
-  if (Players_3F0E[Player].f5E = 2) and not Ready then
+  if (Players[Player].f5E = 2) and not Ready then
   begin
     Angle := 75;
     Power := Random(200) + 200;
     Ready := True;
   end;
-  if (Players_3F0E[Player].f5E > 2) and not Ready then
+  if (Players[Player].f5E > 2) and not Ready then
   begin
-    TScreen(SaveBuf_E496^) := Screen;
+    TScreen(SaveBuf^) := Screen;
     Z := 0;
     SetColor(Player + 19);
-    Circle(Players_3F0E[Target].X, Players_3F0E[Target].Y - 2, 7);
-    for i := 1 to Players_3F0E[Player].f5E - 2 do
-      for j := i + 1 to Players_3F0E[Player].f5E - 1 do
+    Circle(Players[Target].X, Players[Target].Y - 2, 7);
+    for i := 1 to Players[Player].f5E - 2 do
+      for j := i + 1 to Players[Player].f5E - 1 do
       begin
         Line(ShotLog[Player][i].HitX - 5, ShotLog[Player][i].HitY - 5,
              ShotLog[Player][i].HitX + 5, ShotLog[Player][i].HitY + 5);
@@ -346,14 +346,14 @@ begin
         if L = 0 then
           L := 1;
         R := L / dX;
-        Dist := Players_3F0E[Target].X - ShotLog[Player][i].HitX;
+        Dist := Players[Target].X - ShotLog[Player][i].HitX;
         L := Trunc(R * Dist) mod $7FFF;
         Ready := True;
       end;
     Power := ShotLog[Player][i].Power + L;
     if Power < 0 then
       Power := -Power * 2;
-    if Players_3F0E[Player].f5E > 2 then
+    if Players[Player].f5E > 2 then
     begin
       if Abs(Dist) > 5 then
         Weapon := 2;
@@ -362,7 +362,7 @@ begin
       if Abs(Dist) > 30 then
         Weapon := 4;
     end;
-    while Players_3F0E[Player].Ammo[Weapon] < 1 do
+    while Players[Player].Ammo[Weapon] < 1 do
       case Weapon of
         11: Weapon := 0;
         1: Weapon := 11;
@@ -370,7 +370,7 @@ begin
         3: Weapon := 2;
         4: Weapon := 3;
       end;
-    Screen := TScreen(SaveBuf_E496^);
+    Screen := TScreen(SaveBuf^);
   end;
   Think := Steer;
 end;
@@ -398,45 +398,45 @@ var
 begin
   if not Ready then
   begin
-    TScreen(SaveBuf_E496^) := Screen;
+    TScreen(SaveBuf^) := Screen;
     SetColor(Player + 19);
     Weapon := 1;
-    for i := 1 to g_46B4 do
+    for i := 1 to NumPlayers do
     begin
       Score[i] := 1000;
-      if Players_3F0E[i].Y > Players_3F0E[Player].Y + 3 then
+      if Players[i].Y > Players[Player].Y + 3 then
         Score[i] := Score[i] div 10;
-      if (Players_3F0E[i].f23 = 0) or (i = Player) or
-         (Players_3F0E[i].Team = Players_3F0E[Player].Team) then
+      if (Players[i].f23 = 0) or (i = Player) or
+         (Players[i].Team = Players[Player].Team) then
         Score[i] := 0;
       if Score[i] > 0 then
       begin
-        dX := Players_3F0E[i].X - Players_3F0E[Player].X;
-        dY := Players_3F0E[i].Y - Players_3F0E[Player].Y;
-        R := U2918_008F(dX, dY);
+        dX := Players[i].X - Players[Player].X;
+        dY := Players[i].Y - Players[Player].Y;
+        R := VecLength(dX, dY);
         { walk along the line of sight; every pixel of colour 2 (dirt) on
           the way makes the target less attractive }
         for k := 1 to Trunc(R) do
         begin
-          px := Players_3F0E[Player].X + Trunc(dX / R * k);
-          py := Players_3F0E[Player].Y + Trunc(dY / R * k);
-          C := U2823_0BFF(px, py);
+          px := Players[Player].X + Trunc(dX / R * k);
+          py := Players[Player].Y + Trunc(dY / R * k);
+          C := PixelAt(px, py);
           if C = 2 then
             Dec(Score[i]);
-          U2823_0BB6(px, py, i + 19);
+          PlotPixel(px, py, i + 19);
         end;
       end;
     end;
     C := -32767;
     Target := 0;
-    for i := 1 to g_46B4 do
+    for i := 1 to NumPlayers do
       if Score[i] > C then
       begin
         C := Score[i];
         Target := i;
       end;
-    dX := Players_3F0E[Target].X - Players_3F0E[Player].X;
-    dY := Players_3F0E[Player].Y - Players_3F0E[Target].Y + 4;
+    dX := Players[Target].X - Players[Player].X;
+    dY := Players[Player].Y - Players[Target].Y + 4;
     if dX = 0 then
       Inc(dX);
     if dY = 0 then
@@ -449,30 +449,30 @@ begin
           3: Range := 30;
           4: Range := 60;
         end;
-        if (Players_3F0E[Player].Ammo[k] > 0) and (U2918_008F(dX, dY) > Range) then
+        if (Players[Player].Ammo[k] > 0) and (VecLength(dX, dY) > Range) then
           Weapon := k;
       end;
-    if (Score[Target] <= 990) and (Players_3F0E[Player].Ammo[5] > 100) then
+    if (Score[Target] <= 990) and (Players[Player].Ammo[5] > 100) then
       Weapon := 5;
     Power := 1000;
-    Angle := Trunc(U2918_011B(ArcTan(dY / dX)));
+    Angle := Trunc(RadToDeg(ArcTan(dY / dX)));
     if Target < Player then
       Dir := -1
     else
       Dir := 1;
     if Angle < 0 then
       Angle := Abs(Angle);
-    if Players_3F0E[Target].Y - 4 > Players_3F0E[Player].Y then
+    if Players[Target].Y - 4 > Players[Player].Y then
     begin
       Angle := Random(70) + 10;
-      if not (g_46C6 in [1, 2, 3]) then
+      if not (RoundWall in [1, 2, 3]) then
       begin
         Power := Random(280) + 20;
         Angle := 45;
       end;
       Weapon := 1;
     end;
-    Screen := TScreen(SaveBuf_E496^);
+    Screen := TScreen(SaveBuf^);
     Ready := True;
   end;
   Think := Steer;
@@ -495,20 +495,20 @@ var
   P: PComputer;
 begin
   if not Ready then
-    if g_46C6 in [1, 2, 3] then
+    if RoundWall in [1, 2, 3] then
     begin
       P := New(PRifleman, Init(Player));
-      P^ := PComputer(Tanks_3EE2[Player])^;
+      P^ := PComputer(Tanks[Player])^;
       P^.Think;
-      PComputer(Tanks_3EE2[Player])^ := P^;
+      PComputer(Tanks[Player])^ := P^;
       Dispose(P, Done);
     end
     else
     begin
       P := New(PLobber, Init(Player));
-      P^ := PComputer(Tanks_3EE2[Player])^;
+      P^ := PComputer(Tanks[Player])^;
       P^.Think;
-      PComputer(Tanks_3EE2[Player])^ := P^;
+      PComputer(Tanks[Player])^ := P^;
       Dispose(P, Done);
     end;
   Think := Steer;
@@ -538,50 +538,50 @@ var
 begin
   if not Ready then
   begin
-    U2823_0006;
+    FetchClipWindow;
     Tries := 0;
     Ok := True;
-    TScreen(SaveBuf_E496^) := Screen;
+    TScreen(SaveBuf^) := Screen;
     repeat
-      Target := Random(g_46B4) + 1;
-    until (Players_3F0E[Target].f23 <> 0) and (Target <> Player) and
-          (Players_3F0E[Target].Team <> Players_3F0E[Player].Team);
+      Target := Random(NumPlayers) + 1;
+    until (Players[Target].f23 <> 0) and (Target <> Player) and
+          (Players[Target].Team <> Players[Player].Team);
     { flash a cross-hair ellipse around the target }
     SetColor(Player + 19);
     for i := 1 to 2 do
       for j := -15 to 15 do
       begin
-        U2823_017D(Players_3F0E[Target].X, Players_3F0E[Target].Y, 15, Abs(j), Player + 19);
-        U2823_017D(Players_3F0E[Target].X, Players_3F0E[Target].Y, Abs(j), 15, Player + 19);
-        U2823_0687(Players_3F0E[Target].X, Players_3F0E[Target].Y, 15, Abs(j), SaveBuf_E496);
-        U2823_0687(Players_3F0E[Target].X, Players_3F0E[Target].Y, Abs(j), 15, SaveBuf_E496);
+        DrawEllipseNoClip(Players[Target].X, Players[Target].Y, 15, Abs(j), Player + 19);
+        DrawEllipseNoClip(Players[Target].X, Players[Target].Y, Abs(j), 15, Player + 19);
+        CopyEllipse(Players[Target].X, Players[Target].Y, 15, Abs(j), SaveBuf);
+        CopyEllipse(Players[Target].X, Players[Target].Y, Abs(j), 15, SaveBuf);
       end;
-    Screen := TScreen(SaveBuf_E496^);
+    Screen := TScreen(SaveBuf^);
     repeat
       Ok := True;
       Inc(Tries);
-      dX := Players_3F0E[Target].X - Players_3F0E[Player].X;
-      dY := Players_3F0E[Target].Y - Players_3F0E[Player].Y;
+      dX := Players[Target].X - Players[Player].X;
+      dY := Players[Target].Y - Players[Player].Y;
       if dX > 0 then
         Dir := 1
       else
         Dir := -1;
       Angle := Random(90);
       { offset of the muzzle (barrel length 8) }
-      dX := Trunc(dX - Dir * (U26D4_005A(Angle) * 8));
-      dY := Trunc(dY + U26D4_0000(Angle) * 8) - 1;
-      V := dX * 0.05 * dX / (dY + U26D4_00BD(Angle) * Abs(dX));
+      dX := Trunc(dX - Dir * (CosDeg(Angle) * 8));
+      dY := Trunc(dY + SinDeg(Angle) * 8) - 1;
+      V := dX * 0.05 * dX / (dY + TanDeg(Angle) * Abs(dX));
       V := Sqrt(Abs(V));
-      H := U26D4_00BD(Angle) * V;
-      Power := Trunc(U2918_008F(H * 50, V * 50));
-      if (U26D4_00BD(Angle) < Abs(dY / dX)) and (dY < 0) then
+      H := TanDeg(Angle) * V;
+      Power := Trunc(VecLength(H * 50, V * 50));
+      if (TanDeg(Angle) < Abs(dY / dX)) and (dY < 0) then
         Ok := False;
-      if 10 * Players_3F0E[Player].Men < Power then
+      if 10 * Players[Player].Men < Power then
         Ok := False;
     until Ok or (Tries > 40);
     Weapon := 11;
     for j := 1 to 4 do
-      if Players_3F0E[Player].Ammo[j] > 0 then
+      if Players[Player].Ammo[j] > 0 then
         Weapon := j;
     Ready := True;
   end;
@@ -615,40 +615,40 @@ var
 begin
   if not Ready then
   begin
-    U2823_0006;
+    FetchClipWindow;
     Tries := 0;
     Ok := True;
-    TScreen(SaveBuf_E496^) := Screen;
+    TScreen(SaveBuf^) := Screen;
     repeat
-      Target := Random(g_46B4) + 1;
-    until (Players_3F0E[Target].f23 <> 0) and (Target <> Player) and
-          (Players_3F0E[Target].Team <> Players_3F0E[Player].Team);
+      Target := Random(NumPlayers) + 1;
+    until (Players[Target].f23 <> 0) and (Target <> Player) and
+          (Players[Target].Team <> Players[Player].Team);
     SetColor(Player + 19);
     for i := 1 to 10 do
       for j := -15 to 15 do
       begin
-        U2823_017D(Players_3F0E[Target].X, Players_3F0E[Target].Y, 15, Abs(j), Player + 19);
-        U2823_017D(Players_3F0E[Target].X, Players_3F0E[Target].Y, Abs(j), 15, Player + 19);
-        U2823_0687(Players_3F0E[Target].X, Players_3F0E[Target].Y, 15, Abs(j), SaveBuf_E496);
-        U2823_0687(Players_3F0E[Target].X, Players_3F0E[Target].Y, Abs(j), 15, SaveBuf_E496);
+        DrawEllipseNoClip(Players[Target].X, Players[Target].Y, 15, Abs(j), Player + 19);
+        DrawEllipseNoClip(Players[Target].X, Players[Target].Y, Abs(j), 15, Player + 19);
+        CopyEllipse(Players[Target].X, Players[Target].Y, 15, Abs(j), SaveBuf);
+        CopyEllipse(Players[Target].X, Players[Target].Y, Abs(j), 15, SaveBuf);
       end;
-    dX := Players_3F0E[Target].X;
-    dY := Players_3F0E[Target].Y;
+    dX := Players[Target].X;
+    dY := Players[Target].Y;
     repeat
       V := 1000;
       Ok := True;
       Inc(Tries);
-      dX := Players_3F0E[Target].X - Players_3F0E[Player].X;
-      dY := Players_3F0E[Target].Y - Players_3F0E[Player].Y;
+      dX := Players[Target].X - Players[Player].X;
+      dY := Players[Target].Y - Players[Player].Y;
       Angle := Random(180);
-      dX := Trunc(dX - U26D4_005A(Angle) * 8);
-      dY := Trunc(dY + U26D4_0000(Angle) * 8) - 1;
+      dX := Trunc(dX - CosDeg(Angle) * 8);
+      dY := Trunc(dY + SinDeg(Angle) * 8) - 1;
       G := -0.05;
       X := dX;
       Y := -dY;
-      S := U26D4_0000(Angle);
-      C := U26D4_005A(Angle);
-      W := g_E778 * 0.5 / 5000;
+      S := SinDeg(Angle);
+      C := CosDeg(Angle);
+      W := WindForce * 0.5 / 5000;
       if S = 0 then
         Ok := False;
       if C = 0 then
@@ -677,12 +677,12 @@ begin
       end;
       if Power < 0 then
         Ok := False;
-      if 10 * Players_3F0E[Player].Men < Power then
+      if 10 * Players[Player].Men < Power then
         Ok := False;
     until Ok or (Tries > 40);
     Weapon := 11;
     for j := 1 to 4 do
-      if Players_3F0E[Player].Ammo[j] > 0 then
+      if Players[Player].Ammo[j] > 0 then
         Weapon := j;
     Ready := True;
   end;
@@ -718,54 +718,54 @@ var
   P: PComputer;
 begin
   if not Ready then
-    if g_46C6 in [1, 2, 3] then
+    if RoundWall in [1, 2, 3] then
     begin
-      TScreen(SaveBuf_E496^) := Screen;
+      TScreen(SaveBuf^) := Screen;
       SetColor(Player + 19);
       Weapon := 1;
-      for i := 1 to g_46B4 do
+      for i := 1 to NumPlayers do
       begin
         Score[i] := 1000;
         if Player = i then
           Score[i] := -1;
-        if Players_3F0E[i].f23 = 0 then
+        if Players[i].f23 = 0 then
           Score[i] := -1;
-        if Players_3F0E[i].Team = Players_3F0E[Player].Team then
+        if Players[i].Team = Players[Player].Team then
           Score[i] := -1;
         if Score[i] <> -1 then
         begin
-          dX := Players_3F0E[i].X - Players_3F0E[Player].X;
-          dY := Players_3F0E[Player].Y - Players_3F0E[i].Y;
-          H := Players_3F0E[i].Y - 28;
+          dX := Players[i].X - Players[Player].X;
+          dY := Players[Player].Y - Players[i].Y;
+          H := Players[i].Y - 28;
           A := ArcTan(Abs((dY + H + H) / dX));
           if dX < 0 then
             Dir := -1
           else
             Dir := 1;
-          g_4626 := Players_3F0E[Player].Y - 28;
-          g_4624 := Trunc(Dir * g_4626 / (Sin(A) / Cos(A)));
-          R := U2918_008F(g_4624, g_4626);
+          TmpY := Players[Player].Y - 28;
+          TmpX := Trunc(Dir * TmpY / (Sin(A) / Cos(A)));
+          R := VecLength(TmpX, TmpY);
           Col := i + 19;
           for k := 1 to Trunc(R) do
           begin
-            px := Trunc(Players_3F0E[Player].X + g_4624 / R * k);
-            py := Trunc(Players_3F0E[Player].Y - g_4626 / R * k);
-            if U2823_0BFF(px, py) = 2 then
+            px := Trunc(Players[Player].X + TmpX / R * k);
+            py := Trunc(Players[Player].Y - TmpY / R * k);
+            if PixelAt(px, py) = 2 then
               Score[i] := Score[i] - 3;
-            U2823_0BB6(px, py, Col);
+            PlotPixel(px, py, Col);
           end;
-          mx := Players_3F0E[Player].X + g_4624;
-          my := Players_3F0E[Player].Y - g_4626;
-          g_4626 := Players_3F0E[i].Y - my;
-          g_4624 := Players_3F0E[i].X - mx;
-          R := U2918_008F(g_4624, g_4626);
+          mx := Players[Player].X + TmpX;
+          my := Players[Player].Y - TmpY;
+          TmpY := Players[i].Y - my;
+          TmpX := Players[i].X - mx;
+          R := VecLength(TmpX, TmpY);
           for k := 1 to Trunc(R) do
           begin
-            px := Trunc(mx + g_4624 / R * k);
-            py := Trunc(my + g_4626 / R * k);
-            if U2823_0BFF(px, py) = 2 then
+            px := Trunc(mx + TmpX / R * k);
+            py := Trunc(my + TmpY / R * k);
+            if PixelAt(px, py) = 2 then
               Dec(Score[i]);
-            U2823_0BB6(px, py, Col);
+            PlotPixel(px, py, Col);
           end;
         end;
       end;
@@ -774,7 +774,7 @@ begin
       Level := 1;
       Target := 0;
       FillChar(Rank, SizeOf(Rank), 0);
-      for i := 1 to g_46B4 do
+      for i := 1 to NumPlayers do
         if Score[i] > Best then
         begin
           Inc(Level);
@@ -784,20 +784,20 @@ begin
         else if Score[i] = Best then
           Rank[i] := Level;
       Best := 0;
-      for i := 1 to g_46B4 do
+      for i := 1 to NumPlayers do
         if Rank[i] >= Best then
           Best := Rank[i];
-      for i := 1 to g_46B4 do
+      for i := 1 to NumPlayers do
         if Rank[i] < Best then
           Rank[i] := 0;
       Target := 0;
       FillChar(Score, SizeOf(Score), 0);
-      for i := 1 to g_46B4 do
+      for i := 1 to NumPlayers do
         if Rank[i] <> 0 then
-          Score[i] := 1000 - Trunc(U2918_008F(Players_3F0E[Player].X - Players_3F0E[i].X,
-                                              Players_3F0E[Player].Y - Players_3F0E[i].Y));
+          Score[i] := 1000 - Trunc(VecLength(Players[Player].X - Players[i].X,
+                                              Players[Player].Y - Players[i].Y));
       Best := 0;
-      for i := 1 to g_46B4 do
+      for i := 1 to NumPlayers do
         if Score[i] > Best then
         begin
           Best := Score[i];
@@ -805,53 +805,53 @@ begin
         end;
       { trace the path to the chosen target once more }
       i := Target;
-      Screen := TScreen(SaveBuf_E496^);
+      Screen := TScreen(SaveBuf^);
       Score[i] := 1000;
-      dX := Players_3F0E[i].X - Players_3F0E[Player].X;
-      dY := Players_3F0E[Player].Y - Players_3F0E[i].Y;
-      H := Players_3F0E[i].Y - 28;
+      dX := Players[i].X - Players[Player].X;
+      dY := Players[Player].Y - Players[i].Y;
+      H := Players[i].Y - 28;
       A := ArcTan(Abs((dY + H + H) / dX));
       if i < Player then
         Dir := -1
       else
         Dir := 1;
-      g_4626 := Players_3F0E[Player].Y - 28;
-      g_4624 := Trunc(Dir * g_4626 / (Sin(A) / Cos(A)));
-      R := U2918_008F(g_4624, g_4626);
+      TmpY := Players[Player].Y - 28;
+      TmpX := Trunc(Dir * TmpY / (Sin(A) / Cos(A)));
+      R := VecLength(TmpX, TmpY);
       Col := i + 19;
       for k := 1 to Trunc(R) do
       begin
-        px := Trunc(Players_3F0E[Player].X + g_4624 / R * k);
-        py := Trunc(Players_3F0E[Player].Y - g_4626 / R * k);
-        if U2823_0BFF(px, py) = 2 then
+        px := Trunc(Players[Player].X + TmpX / R * k);
+        py := Trunc(Players[Player].Y - TmpY / R * k);
+        if PixelAt(px, py) = 2 then
           Score[i] := Score[i] - 3;
-        U2823_0BB6(px, py, Col);
+        PlotPixel(px, py, Col);
       end;
-      mx := Players_3F0E[Player].X + g_4624;
-      my := Players_3F0E[Player].Y - g_4626;
-      g_4626 := Players_3F0E[i].Y - my;
-      g_4624 := Players_3F0E[i].X - mx;
-      R := U2918_008F(g_4624, g_4626);
+      mx := Players[Player].X + TmpX;
+      my := Players[Player].Y - TmpY;
+      TmpY := Players[i].Y - my;
+      TmpX := Players[i].X - mx;
+      R := VecLength(TmpX, TmpY);
       for k := 1 to Trunc(R) do
       begin
-        px := Trunc(mx + g_4624 / R * k);
-        py := Trunc(my + g_4626 / R * k);
-        if U2823_0BFF(px, py) = 2 then
+        px := Trunc(mx + TmpX / R * k);
+        py := Trunc(my + TmpY / R * k);
+        if PixelAt(px, py) = 2 then
           Dec(Score[i]);
-        U2823_0BB6(px, py, Col);
+        PlotPixel(px, py, Col);
       end;
-      dX := Players_3F0E[Target].X - Players_3F0E[Player].X;
-      dY := Players_3F0E[Player].Y - Players_3F0E[Target].Y;
-      H := Players_3F0E[Target].Y - 28;
+      dX := Players[Target].X - Players[Player].X;
+      dY := Players[Player].Y - Players[Target].Y;
+      H := Players[Target].Y - 28;
       Power := Random(51) + 950;
-      Angle := Trunc(U2918_011B(ArcTan(Abs((dY + H + H) / dX))));
+      Angle := Trunc(RadToDeg(ArcTan(Abs((dY + H + H) / dX))));
       if dX < 0 then
         Dir := -1
       else
         Dir := 1;
       if Angle < 0 then
         Angle := Abs(Angle);
-      Screen := TScreen(SaveBuf_E496^);
+      Screen := TScreen(SaveBuf^);
       Weapon := 1;
       if Score[Target] > 990 then
         for w := 2 to 4 do
@@ -861,19 +861,19 @@ begin
             3: Range := 30;
             4: Range := 60;
           end;
-          if (Players_3F0E[Player].Ammo[w] > 0) and (U2918_008F(dX, dY) > Range) then
+          if (Players[Player].Ammo[w] > 0) and (VecLength(dX, dY) > Range) then
             Weapon := w;
         end;
-      if (Score[Target] <= 990) and (Players_3F0E[Player].Ammo[5] > 100) then
+      if (Score[Target] <= 990) and (Players[Player].Ammo[5] > 100) then
         Weapon := 5;
       Ready := True;
     end
     else
     begin
       P := New(PRifleman, Init(Player));
-      P^ := PComputer(Tanks_3EE2[Player])^;
+      P^ := PComputer(Tanks[Player])^;
       P^.Think;
-      PComputer(Tanks_3EE2[Player])^ := P^;
+      PComputer(Tanks[Player])^ := P^;
       Dispose(P, Done);
     end;
   Think := Steer;
@@ -881,13 +881,13 @@ end;
 
 { free all computer players }
 {#U23C3_2E0B}
-procedure U23C3_2E0B;
+procedure FreeComputers;
 begin
-  for g_461E := 1 to 10 do
+  for LoopI := 1 to 10 do
   begin
-    if Tanks_3EE2[g_461E] <> nil then
-      Dispose(PComputer(Tanks_3EE2[g_461E]), Done);
-    Tanks_3EE2[g_461E] := nil;
+    if Tanks[LoopI] <> nil then
+      Dispose(PComputer(Tanks[LoopI]), Done);
+    Tanks[LoopI] := nil;
   end;
 end;
 

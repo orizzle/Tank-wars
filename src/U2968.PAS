@@ -19,51 +19,51 @@ type
 
 var
   { DS E820-E821 }
-  g_E820: Byte;                     { mouse enabled }
-  g_E821: Byte;
+  MouseEnabled: Byte;                     { DS:E820  mouse enabled }
+  UnusedE821: Byte;  { DS:E821 }
 
-procedure U2968_0000(C: TMouseCursor);
-procedure U2968_002E(B: Byte);
-function  U2968_003B: Byte;
-procedure U2968_0047;
-procedure U2968_004D;
-procedure U2968_005A;
-function  U2968_0067: Integer;
-function  U2968_006F: Integer;
-function  U2968_0077(Buttons: Word): Boolean;
-procedure U2968_009C(HotX, HotY: Integer; var Mask);
-function  U2968_00B1: Integer;
-procedure U2968_00B9(Buf: Pointer);
-procedure U2968_00C8(Buf: Pointer);
-procedure U2968_00D7;
+procedure SetMouseCursor(C: TMouseCursor);
+procedure SetMouseEnabled(B: Byte);
+function  DetectMouse: Byte;
+procedure ResetMouse;
+procedure ShowMouseCursor;
+procedure HideMouseCursor;
+function  MouseRawX: Integer;
+function  MouseRawY: Integer;
+function  MouseBtnsDown(Buttons: Word): Boolean;
+procedure SetMouseShape(HotX, HotY: Integer; var Mask);
+function  MouseStateSize: Integer;
+procedure SaveMouseState(Buf: Pointer);
+procedure RestoreMouseState(Buf: Pointer);
+procedure MouseSoftReset;
 
 implementation
 
 { set graphics cursor shape }
 {#U2968_0000}
-procedure U2968_0000(C: TMouseCursor);
+procedure SetMouseCursor(C: TMouseCursor);
 begin
-  U2968_009C(C.HotX, C.HotY, C.Mask);
+  SetMouseShape(C.HotX, C.HotY, C.Mask);
 end;
 
 {#U2968_002E}
-procedure U2968_002E(B: Byte);
+procedure SetMouseEnabled(B: Byte);
 begin
-  g_E820 := B;
+  MouseEnabled := B;
 end;
 
 { reset driver; returns 1 if a mouse is installed }
 {#U2968_003B}
-function U2968_003B: Byte; assembler;
+function DetectMouse: Byte; assembler;
 asm
   mov ax, 0
   int 33h
   and ax, 1
-  mov byte ptr [g_E820], al
+  mov byte ptr [MouseEnabled], al
 end;
 
 {#U2968_0047}
-procedure U2968_0047; assembler;
+procedure ResetMouse; assembler;
 asm
   mov ax, 0
   int 33h
@@ -71,9 +71,9 @@ end;
 
 { show cursor }
 {#U2968_004D}
-procedure U2968_004D; assembler;
+procedure ShowMouseCursor; assembler;
 asm
-  cmp byte ptr [g_E820], 1
+  cmp byte ptr [MouseEnabled], 1
   jne @1
   mov ax, 1
   int 33h
@@ -82,9 +82,9 @@ end;
 
 { hide cursor }
 {#U2968_005A}
-procedure U2968_005A; assembler;
+procedure HideMouseCursor; assembler;
 asm
-  cmp byte ptr [g_E820], 1
+  cmp byte ptr [MouseEnabled], 1
   jne @1
   mov ax, 2
   int 33h
@@ -93,7 +93,7 @@ end;
 
 { mouse x }
 {#U2968_0067}
-function U2968_0067: Integer; assembler;
+function MouseRawX: Integer; assembler;
 asm
   mov ax, 3
   int 33h
@@ -102,7 +102,7 @@ end;
 
 { mouse y }
 {#U2968_006F}
-function U2968_006F: Integer; assembler;
+function MouseRawY: Integer; assembler;
 asm
   mov ax, 3
   int 33h
@@ -111,9 +111,9 @@ end;
 
 { are all of the given buttons pressed? }
 {#U2968_0077}
-function U2968_0077(Buttons: Word): Boolean; assembler;
+function MouseBtnsDown(Buttons: Word): Boolean; assembler;
 asm
-  cmp byte ptr [g_E820], 1
+  cmp byte ptr [MouseEnabled], 1
   mov ax, 0
   jne @1
   mov ax, 3
@@ -128,7 +128,7 @@ asm
 end;
 
 {#U2968_009C}
-procedure U2968_009C(HotX, HotY: Integer; var Mask); assembler;
+procedure SetMouseShape(HotX, HotY: Integer; var Mask); assembler;
 asm
   mov ax, 9
   les dx, Mask
@@ -139,7 +139,7 @@ end;
 
 { size of driver state buffer }
 {#U2968_00B1}
-function U2968_00B1: Integer; assembler;
+function MouseStateSize: Integer; assembler;
 asm
   mov ax, 15h
   int 33h
@@ -148,7 +148,7 @@ end;
 
 { save driver state }
 {#U2968_00B9}
-procedure U2968_00B9(Buf: Pointer); assembler;
+procedure SaveMouseState(Buf: Pointer); assembler;
 asm
   mov ax, 16h
   les dx, Buf
@@ -157,7 +157,7 @@ end;
 
 { restore driver state }
 {#U2968_00C8}
-procedure U2968_00C8(Buf: Pointer); assembler;
+procedure RestoreMouseState(Buf: Pointer); assembler;
 asm
   mov ax, 17h
   les dx, Buf
@@ -166,7 +166,7 @@ end;
 
 { software reset }
 {#U2968_00D7}
-procedure U2968_00D7; assembler;
+procedure MouseSoftReset; assembler;
 asm
   mov ax, 21h
   int 33h
@@ -174,5 +174,5 @@ end;
 
 {#U2968_00DD}
 begin
-  g_E820 := 0;
+  MouseEnabled := 0;
 end.

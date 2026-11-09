@@ -2,7 +2,7 @@
 unit U2823;
 
 { Mode 13h graphics primitives (hand-written BASM) and VGA DAC helpers.
-  Most primitives write to segment g_E7D6 ($A000 or an off-screen buffer);
+  Most primitives write to segment VideoSeg ($A000 or an off-screen buffer);
   the "copy" variants read the pixels from the buffer whose segment is
   passed as word ptr Buf (offset part unused). }
 
@@ -20,80 +20,80 @@ type
 
 var
   { DS E7C0-E7E1 }
-  g_E7C0: TPalBlockProc;  { SetPalette w/o retrace wait (used by the palette cycler ISR) }
-  g_E7C4: procedure(Start, Count: Integer; Buf: Pointer);  { SetPalette (set by U2823 init) }
-  g_E7C8: procedure(Color, R, G, B: Integer);  { SetRGB (set by U2823 init) }
-  g_E7CC: ViewPortType;   { clip window (x1,y1,x2,y2,Clip) }
-  g_E7D5: Byte;
-  g_E7D6: Word;           { video segment used by the primitives }
-  g_E7D8: Byte;           { use ports instead of BIOS }
-  g_E7D9: Byte;           { no retrace wait }
-  g_E7DA: Integer;        { CPU type (U2918_04A3) }
-  g_E7DC: array[0..5] of Byte;
+  PalBlockNoWaitHook: TPalBlockProc;  { DS:E7C0  SetPalette w/o retrace wait (used by the palette cycler ISR) }
+  PalBlockHook: procedure(Start, Count: Integer; Buf: Pointer);  { DS:E7C4  SetPalette (set by U2823 init) }
+  RGBHook: procedure(Color, R, G, B: Integer);  { DS:E7C8  SetRGB (set by U2823 init) }
+  ClipView: ViewPortType;   { DS:E7CC  clip window (x1,y1,x2,y2,Clip) }
+  UnusedE7D5: Byte;  { DS:E7D5 }
+  VideoSeg: Word;           { DS:E7D6  video segment used by the primitives }
+  VidUsePorts: Byte;           { DS:E7D8  use ports instead of BIOS }
+  VidNoWait: Byte;           { DS:E7D9  no retrace wait }
+  VidCpuType: Integer;        { DS:E7DA  CPU type (CpuType) }
+  UnusedE7DC: array[0..5] of Byte;  { DS:E7DC }
 
-procedure U2823_0000;
-procedure U2823_0006;
-procedure U2823_0015;
-procedure U2823_0025;
-procedure U2823_0031(X1, Y1, X2, Y2: Integer; Color: Byte);
-procedure U2823_0088(X1, Y1, X2, Y2: Integer; Color: Byte);
-procedure U2823_00CC(X1, Y1, X2, Y2: Integer; Buf: Pointer);
-procedure U2823_011A(X1, Y1, X2, Y2: Integer; Buf: Pointer);
-procedure U2823_017D(X, Y, RX, RY: Integer; Color: Byte);
-procedure U2823_0351(X, Y, RX, RY: Integer; Color: Byte);
-procedure U2823_0687(X, Y, RX, RY: Integer; Buf: Pointer);
-procedure U2823_09E4(X1, Y1, X2, Y2: Integer; Color: Byte);
-procedure U2823_0AC0(X1, Y1, X2, Y2: Integer; Buf: Pointer);
-procedure U2823_0BB6(X, Y: Integer; Color: Byte);
-procedure U2823_0BD8(X, Y: Integer; Buf: Pointer);
-function  U2823_0BFF(X, Y: Integer): Byte;
-procedure U2823_0C20(Start, Count: Integer; Buf: Pointer);
-procedure U2823_0C5A;
-procedure U2823_0C6E(Start, Count: Integer; Buf: Pointer);
-procedure U2823_0C95(Start, Count: Integer; Buf: Pointer);
-procedure U2823_0CC2(Start, Count: Integer; Buf: Pointer);
-procedure U2823_0CEB(Start, Count: Integer; Buf: Pointer);
-procedure U2823_0D08(Start, Count: Integer; Buf: Pointer);
-procedure U2823_0D32(Start, Count: Integer; Buf: Pointer);
-procedure U2823_0D59(Color, R, G, B: Integer);
-procedure U2823_0D71(Color, R, G, B: Integer);
-procedure U2823_0D98(Color, R, G, B: Integer);
-procedure U2823_0DB0(Color, R, G, B: Integer);
-procedure U2823_0DCF(CPU: Integer; UsePorts, NoWait: Byte);
+procedure SetMode13h;
+procedure FetchClipWindow;
+procedure PixelAddress;
+procedure MulLongWord;
+procedure DrawRect(X1, Y1, X2, Y2: Integer; Color: Byte);
+procedure FillBar(X1, Y1, X2, Y2: Integer; Color: Byte);
+procedure CopyBar(X1, Y1, X2, Y2: Integer; Buf: Pointer);
+procedure CopyRect(X1, Y1, X2, Y2: Integer; Buf: Pointer);
+procedure DrawEllipseNoClip(X, Y, RX, RY: Integer; Color: Byte);
+procedure DrawEllipse(X, Y, RX, RY: Integer; Color: Byte);
+procedure CopyEllipse(X, Y, RX, RY: Integer; Buf: Pointer);
+procedure DrawLine(X1, Y1, X2, Y2: Integer; Color: Byte);
+procedure CopyLine(X1, Y1, X2, Y2: Integer; Buf: Pointer);
+procedure PlotPixel(X, Y: Integer; Color: Byte);
+procedure CopyPixel(X, Y: Integer; Buf: Pointer);
+function  PixelAt(X, Y: Integer): Byte;
+procedure ReadDacBlock(Start, Count: Integer; Buf: Pointer);
+procedure ClearVgaScreen;
+procedure SetDacBiosWait(Start, Count: Integer; Buf: Pointer);
+procedure SetDacPortsWait86(Start, Count: Integer; Buf: Pointer);
+procedure SetDacPortsWait286(Start, Count: Integer; Buf: Pointer);
+procedure SetDacBios(Start, Count: Integer; Buf: Pointer);
+procedure SetDacPorts86(Start, Count: Integer; Buf: Pointer);
+procedure SetDacPorts286(Start, Count: Integer; Buf: Pointer);
+procedure SetRGBBiosAlt(Color, R, G, B: Integer);
+procedure SetRGBPortsWait(Color, R, G, B: Integer);
+procedure SetRGBBios(Color, R, G, B: Integer);
+procedure SetRGBPorts(Color, R, G, B: Integer);
+procedure SelectDacRoutines(CPU: Integer; UsePorts, NoWait: Byte);
 
 implementation
 
 { set VGA mode 13h }
 {#U2823_0000}
-procedure U2823_0000; assembler;
+procedure SetMode13h; assembler;
 asm
     mov ax, $13
     int $10
 end;
 
-{ fetch the current Graph viewport into g_E7CC }
+{ fetch the current Graph viewport into ClipView }
 {#U2823_0006}
-procedure U2823_0006;
+procedure FetchClipWindow;
 begin
-  GetViewSettings(g_E7CC);
+  GetViewSettings(ClipView);
 end;
 
 { AX = y, BX = x  ->  ES:BX = pixel address }
 {#U2823_0015}
-procedure U2823_0015; assembler;
+procedure PixelAddress; assembler;
 asm
     xchg ah, al
     add bx, ax
     shr ax, 1
     shr ax, 1
     add bx, ax
-    mov ax, g_E7D6
+    mov ax, VideoSeg
     mov es, ax
 end;
 
 { DX:AX := DX:AX * CX (low 32 bits) }
 {#U2823_0025}
-procedure U2823_0025; assembler;
+procedure MulLongWord; assembler;
 asm
     push ax
     mov ax, dx
@@ -106,7 +106,7 @@ end;
 
 { rectangle outline }
 {#U2823_0031}
-procedure U2823_0031(X1, Y1, X2, Y2: Integer; Color: Byte); assembler;
+procedure DrawRect(X1, Y1, X2, Y2: Integer; Color: Byte); assembler;
 asm
     push word ptr X1
     push word ptr Y1
@@ -128,15 +128,15 @@ asm
     push word ptr X2
     push word ptr Y2
     push word ptr Color
-    call U2823_09E4
-    call U2823_09E4
-    call U2823_09E4
-    call U2823_09E4
+    call DrawLine
+    call DrawLine
+    call DrawLine
+    call DrawLine
 end;
 
 { filled bar }
 {#U2823_0088}
-procedure U2823_0088(X1, Y1, X2, Y2: Integer; Color: Byte); assembler;
+procedure FillBar(X1, Y1, X2, Y2: Integer; Color: Byte); assembler;
 asm
     mov bx, word ptr X1
     cmp bx, word ptr X2
@@ -156,7 +156,7 @@ asm
     mov dx, word ptr Y2
     inc dx
     sub dx, ax
-    call U2823_0015
+    call PixelAddress
 @L00B8:
     push cx
     mov al, byte ptr Color
@@ -170,7 +170,7 @@ end;
 
 { copy bar from a 64000 byte buffer (segment of Buf) to the screen }
 {#U2823_00CC}
-procedure U2823_00CC(X1, Y1, X2, Y2: Integer; Buf: Pointer); assembler;
+procedure CopyBar(X1, Y1, X2, Y2: Integer; Buf: Pointer); assembler;
 asm
     push ds
     push si
@@ -193,7 +193,7 @@ asm
     mov dx, word ptr Y2
     inc dx
     sub dx, ax
-    call U2823_0015
+    call PixelAddress
 @L00FF:
     push cx
     mov ax, word ptr Buf+2
@@ -212,7 +212,7 @@ end;
 
 { copy rectangle outline from buffer }
 {#U2823_011A}
-procedure U2823_011A(X1, Y1, X2, Y2: Integer; Buf: Pointer); assembler;
+procedure CopyRect(X1, Y1, X2, Y2: Integer; Buf: Pointer); assembler;
 asm
     push word ptr X1
     push word ptr Y1
@@ -238,15 +238,15 @@ asm
     push word ptr Y2
     push word ptr Buf+2
     push word ptr Buf+2
-    call U2823_0AC0
-    call U2823_0AC0
-    call U2823_0AC0
-    call U2823_0AC0
+    call CopyLine
+    call CopyLine
+    call CopyLine
+    call CopyLine
 end;
 
 { ellipse outline (no clipping); contains the far-called sub-routine @L02F5 (plot 4 points) }
 {#U2823_017D}
-procedure U2823_017D(X, Y, RX, RY: Integer; Color: Byte); assembler;
+procedure DrawEllipseNoClip(X, Y, RX, RY: Integer; Color: Byte); assembler;
 var
   Frame: array[1..$28] of Byte;
 asm
@@ -272,7 +272,7 @@ asm
     mov di, ax
     mov ax, word ptr Y
     mov bx, word ptr X
-    call U2823_0015
+    call PixelAddress
     add si, bx
     mov [bp-2], si
     mov [bp-4], si
@@ -285,7 +285,7 @@ asm
     mov ax, [bp-$22]
     mov dx, [bp-$24]
     mov cx, word ptr RY
-    call U2823_0025
+    call MulLongWord
     mov [bp-$16], ax
     mov [bp-$18], dx
     mov ax, [bp-$1A]
@@ -301,7 +301,7 @@ asm
     mov ax, [bp-$1A]
     mov dx, [bp-$1C]
     mov cx, word ptr RY
-    call U2823_0025
+    call MulLongWord
     sub [bp-$E], ax
     sbb [bp-$10], dx
     mov bx, word ptr RY
@@ -434,35 +434,35 @@ asm
 @L034B:
 end;
 
-{ ellipse outline, clipped to g_E7CC when needed }
+{ ellipse outline, clipped to ClipView when needed }
 {#U2823_0351}
-procedure U2823_0351(X, Y, RX, RY: Integer; Color: Byte); assembler;
+procedure DrawEllipse(X, Y, RX, RY: Integer; Color: Byte); assembler;
 var
   Frame: array[1..$3C] of Byte;
 asm
-    mov ax, g_E7CC.x1
+    mov ax, ClipView.x1
     add word ptr X, ax
-    mov ax, g_E7CC.y1
+    mov ax, ClipView.y1
     add word ptr Y, ax
     mov word ptr [bp-$3A], seg @Code
     mov word ptr [bp-$3C], offset @L053F
-    cmp byte ptr g_E7CC.Clip, 0
+    cmp byte ptr ClipView.Clip, 0
     je @L03A9
     mov ax, word ptr X
     mov bx, ax
     add ax, word ptr RX
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L03A4
     sub bx, word ptr RX
-    cmp bx, g_E7CC.x1
+    cmp bx, ClipView.x1
     jl @L03A4
     mov ax, word ptr Y
     mov bx, ax
     add ax, word ptr RY
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L03A4
     sub bx, word ptr RY
-    cmp bx, g_E7CC.y1
+    cmp bx, ClipView.y1
     jl @L03A4
     jmp @L03A9
 @L03A4:
@@ -503,7 +503,7 @@ asm
     mov [bp-$18], ax
     mov ax, word ptr Y
     mov bx, word ptr X
-    call U2823_0015
+    call PixelAddress
     add si, bx
     mov [bp-2], si
     mov [bp-4], si
@@ -516,7 +516,7 @@ asm
     mov ax, [bp-$32]
     mov dx, [bp-$34]
     mov cx, word ptr RY
-    call U2823_0025
+    call MulLongWord
     mov [bp-$26], ax
     mov [bp-$28], dx
     mov ax, [bp-$2A]
@@ -532,7 +532,7 @@ asm
     mov ax, [bp-$2A]
     mov dx, [bp-$2C]
     mov cx, word ptr RY
-    call U2823_0025
+    call MulLongWord
     sub [bp-$1E], ax
     sbb [bp-$20], dx
     mov bx, word ptr RY
@@ -695,26 +695,26 @@ asm
     mov [bp-6], di
     mov ch, byte ptr Color
     mov ax, [bp-$E]
-    cmp ax, g_E7CC.x1
+    cmp ax, ClipView.x1
     jl @L05FD
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L05FD
     mov ax, [bp-$10]
-    cmp ax, g_E7CC.y1
+    cmp ax, ClipView.y1
     jl @L05FD
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L05FD
     mov es:[si], ch
 @L05FD:
     mov ax, [bp-$16]
-    cmp ax, g_E7CC.x1
+    cmp ax, ClipView.x1
     jl @L061E
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L061E
     mov ax, [bp-$18]
-    cmp ax, g_E7CC.y1
+    cmp ax, ClipView.y1
     jl @L061E
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L061E
     mov es:[di], ch
 @L061E:
@@ -731,26 +731,26 @@ asm
     mov [bp-8], di
     mov ch, byte ptr Color
     mov ax, [bp-$A]
-    cmp ax, g_E7CC.x1
+    cmp ax, ClipView.x1
     jl @L065C
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L065C
     mov ax, [bp-$C]
-    cmp ax, g_E7CC.y1
+    cmp ax, ClipView.y1
     jl @L065C
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L065C
     mov es:[si], ch
 @L065C:
     mov ax, [bp-$12]
-    cmp ax, g_E7CC.x1
+    cmp ax, ClipView.x1
     jl @L067D
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L067D
     mov ax, [bp-$14]
-    cmp ax, g_E7CC.y1
+    cmp ax, ClipView.y1
     jl @L067D
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L067D
     mov es:[di], ch
 @L067D:
@@ -763,33 +763,33 @@ end;
 
 { ellipse outline copied from buffer }
 {#U2823_0687}
-procedure U2823_0687(X, Y, RX, RY: Integer; Buf: Pointer); assembler;
+procedure CopyEllipse(X, Y, RX, RY: Integer; Buf: Pointer); assembler;
 var
   Frame: array[1..$3C] of Byte;
 asm
-    mov ax, g_E7CC.x1
+    mov ax, ClipView.x1
     add word ptr X, ax
-    mov ax, g_E7CC.y1
+    mov ax, ClipView.y1
     add word ptr Y, ax
     mov word ptr [bp-$3A], seg @Code
     mov word ptr [bp-$3C], offset @L0875
-    cmp byte ptr g_E7CC.Clip, 0
+    cmp byte ptr ClipView.Clip, 0
     je @L06DF
     mov ax, word ptr X
     mov bx, ax
     add ax, word ptr RX
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L06DA
     sub bx, word ptr RX
-    cmp bx, g_E7CC.x1
+    cmp bx, ClipView.x1
     jl @L06DA
     mov ax, word ptr Y
     mov bx, ax
     add ax, word ptr RY
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L06DA
     sub bx, word ptr RY
-    cmp bx, g_E7CC.y1
+    cmp bx, ClipView.y1
     jl @L06DA
     jmp @L06DF
 @L06DA:
@@ -830,7 +830,7 @@ asm
     mov [bp-$18], ax
     mov ax, word ptr Y
     mov bx, word ptr X
-    call U2823_0015
+    call PixelAddress
     add si, bx
     mov [bp-2], si
     mov [bp-4], si
@@ -843,7 +843,7 @@ asm
     mov ax, [bp-$32]
     mov dx, [bp-$34]
     mov cx, word ptr RY
-    call U2823_0025
+    call MulLongWord
     mov [bp-$26], ax
     mov [bp-$28], dx
     mov ax, [bp-$2A]
@@ -859,7 +859,7 @@ asm
     mov ax, [bp-$2A]
     mov dx, [bp-$2C]
     mov cx, word ptr RY
-    call U2823_0025
+    call MulLongWord
     sub [bp-$1E], ax
     sbb [bp-$20], dx
     mov bx, word ptr RY
@@ -1027,14 +1027,14 @@ asm
     mov [bp-2], si
     mov [bp-6], di
     mov ax, [bp-$E]
-    cmp ax, g_E7CC.x1
+    cmp ax, ClipView.x1
     jl @L0942
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L0942
     mov ax, [bp-$10]
-    cmp ax, g_E7CC.y1
+    cmp ax, ClipView.y1
     jl @L0942
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L0942
     push ds
     mov ax, word ptr Buf+2
@@ -1044,14 +1044,14 @@ asm
     pop ds
 @L0942:
     mov ax, [bp-$16]
-    cmp ax, g_E7CC.x1
+    cmp ax, ClipView.x1
     jl @L096C
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L096C
     mov ax, [bp-$18]
-    cmp ax, g_E7CC.y1
+    cmp ax, ClipView.y1
     jl @L096C
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L096C
     push ds
     mov ax, word ptr Buf+2
@@ -1072,14 +1072,14 @@ asm
     mov [bp-4], si
     mov [bp-8], di
     mov ax, [bp-$A]
-    cmp ax, g_E7CC.x1
+    cmp ax, ClipView.x1
     jl @L09B0
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L09B0
     mov ax, [bp-$C]
-    cmp ax, g_E7CC.y1
+    cmp ax, ClipView.y1
     jl @L09B0
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L09B0
     push ds
     mov ax, word ptr Buf+2
@@ -1089,14 +1089,14 @@ asm
     pop ds
 @L09B0:
     mov ax, [bp-$12]
-    cmp ax, g_E7CC.x1
+    cmp ax, ClipView.x1
     jl @L09DA
-    cmp ax, g_E7CC.x2
+    cmp ax, ClipView.x2
     jg @L09DA
     mov ax, [bp-$14]
-    cmp ax, g_E7CC.y1
+    cmp ax, ClipView.y1
     jl @L09DA
-    cmp ax, g_E7CC.y2
+    cmp ax, ClipView.y2
     jg @L09DA
     push ds
     mov ax, word ptr Buf+2
@@ -1114,7 +1114,7 @@ end;
 
 { line (Bresenham) }
 {#U2823_09E4}
-procedure U2823_09E4(X1, Y1, X2, Y2: Integer; Color: Byte); assembler;
+procedure DrawLine(X1, Y1, X2, Y2: Integer; Color: Byte); assembler;
 var
   Frame: array[1..6] of Byte;
 asm
@@ -1154,7 +1154,7 @@ asm
     push cx
     mov ax, word ptr Y1
     mov bx, word ptr X1
-    call U2823_0015
+    call PixelAddress
     mov di, bx
     pop cx
     inc cx
@@ -1172,7 +1172,7 @@ asm
     inc cx
     mov bx, word ptr X1
     push cx
-    call U2823_0015
+    call PixelAddress
     pop cx
     mov di, bx
     dec si
@@ -1186,7 +1186,7 @@ asm
     push cx
     mov ax, word ptr Y1
     mov bx, word ptr X1
-    call U2823_0015
+    call PixelAddress
     mov di, bx
     pop cx
     inc cx
@@ -1226,7 +1226,7 @@ end;
 
 { line copied from buffer }
 {#U2823_0AC0}
-procedure U2823_0AC0(X1, Y1, X2, Y2: Integer; Buf: Pointer); assembler;
+procedure CopyLine(X1, Y1, X2, Y2: Integer; Buf: Pointer); assembler;
 var
   Frame: array[1..6] of Byte;
 asm
@@ -1266,7 +1266,7 @@ asm
     push cx
     mov ax, word ptr Y1
     mov bx, word ptr X1
-    call U2823_0015
+    call PixelAddress
     mov di, bx
     pop cx
     inc cx
@@ -1284,7 +1284,7 @@ asm
     inc cx
     mov bx, word ptr X1
     push cx
-    call U2823_0015
+    call PixelAddress
     pop cx
     mov di, bx
     dec si
@@ -1302,7 +1302,7 @@ asm
     push cx
     mov ax, word ptr Y1
     mov bx, word ptr X1
-    call U2823_0015
+    call PixelAddress
     mov di, bx
     pop cx
     inc cx
@@ -1354,7 +1354,7 @@ end;
 
 { put pixel }
 {#U2823_0BB6}
-procedure U2823_0BB6(X, Y: Integer; Color: Byte); assembler;
+procedure PlotPixel(X, Y: Integer; Color: Byte); assembler;
 asm
     mov ax, word ptr Y
     mov bx, word ptr X
@@ -1371,7 +1371,7 @@ end;
 
 { copy one pixel from buffer }
 {#U2823_0BD8}
-procedure U2823_0BD8(X, Y: Integer; Buf: Pointer); assembler;
+procedure CopyPixel(X, Y: Integer; Buf: Pointer); assembler;
 asm
     mov ax, word ptr Y
     mov bx, word ptr X
@@ -1390,7 +1390,7 @@ end;
 
 { get pixel }
 {#U2823_0BFF}
-function U2823_0BFF(X, Y: Integer): Byte; assembler;
+function PixelAt(X, Y: Integer): Byte; assembler;
 asm
     mov ax, word ptr Y
     mov bx, word ptr X
@@ -1407,7 +1407,7 @@ end;
 
 { read DAC block (INT 10h AX=1017h) }
 {#U2823_0C20}
-procedure U2823_0C20(Start, Count: Integer; Buf: Pointer);
+procedure ReadDacBlock(Start, Count: Integer; Buf: Pointer);
 var
   R: Registers;
 begin
@@ -1421,7 +1421,7 @@ end;
 
 { clear screen }
 {#U2823_0C5A}
-procedure U2823_0C5A; assembler;
+procedure ClearVgaScreen; assembler;
 asm
     push di
     cld
@@ -1436,7 +1436,7 @@ end;
 
 { set DAC block via BIOS, wait for retrace }
 {#U2823_0C6E}
-procedure U2823_0C6E(Start, Count: Integer; Buf: Pointer); assembler;
+procedure SetDacBiosWait(Start, Count: Integer; Buf: Pointer); assembler;
 asm
     push ds
     mov ax, word ptr Buf+2
@@ -1459,7 +1459,7 @@ end;
 
 { set DAC block via ports, wait for retrace (8086) }
 {#U2823_0C95}
-procedure U2823_0C95(Start, Count: Integer; Buf: Pointer); assembler;
+procedure SetDacPortsWait86(Start, Count: Integer; Buf: Pointer); assembler;
 asm
     push ds
     mov al, byte ptr Count
@@ -1488,7 +1488,7 @@ end;
 
 { set DAC block via ports, wait for retrace (286+: rep outsb) }
 {#U2823_0CC2}
-procedure U2823_0CC2(Start, Count: Integer; Buf: Pointer); assembler;
+procedure SetDacPortsWait286(Start, Count: Integer; Buf: Pointer); assembler;
 asm
     push ds
     mov cx, word ptr Count
@@ -1513,7 +1513,7 @@ end;
 
 { set DAC block via BIOS }
 {#U2823_0CEB}
-procedure U2823_0CEB(Start, Count: Integer; Buf: Pointer); assembler;
+procedure SetDacBios(Start, Count: Integer; Buf: Pointer); assembler;
 asm
     mov ax, word ptr Buf+2
     mov es, ax
@@ -1529,7 +1529,7 @@ end;
 
 { set DAC block via ports (8086) }
 {#U2823_0D08}
-procedure U2823_0D08(Start, Count: Integer; Buf: Pointer); assembler;
+procedure SetDacPorts86(Start, Count: Integer; Buf: Pointer); assembler;
 asm
     push ds
     mov al, byte ptr Count
@@ -1554,7 +1554,7 @@ end;
 
 { set DAC block via ports (286+) }
 {#U2823_0D32}
-procedure U2823_0D32(Start, Count: Integer; Buf: Pointer); assembler;
+procedure SetDacPorts286(Start, Count: Integer; Buf: Pointer); assembler;
 asm
     push ds
     mov al, byte ptr Count
@@ -1576,7 +1576,7 @@ end;
 
 { set one DAC register via BIOS }
 {#U2823_0D59}
-procedure U2823_0D59(Color, R, G, B: Integer); assembler;
+procedure SetRGBBiosAlt(Color, R, G, B: Integer); assembler;
 asm
     mov ax, $1010
     mov bx, word ptr Color
@@ -1588,7 +1588,7 @@ end;
 
 { set one DAC register via ports, wait for retrace }
 {#U2823_0D71}
-procedure U2823_0D71(Color, R, G, B: Integer); assembler;
+procedure SetRGBPortsWait(Color, R, G, B: Integer); assembler;
 asm
     mov dx, $3DA
 @L0D77:
@@ -1611,7 +1611,7 @@ end;
 
 { set one DAC register via BIOS }
 {#U2823_0D98}
-procedure U2823_0D98(Color, R, G, B: Integer); assembler;
+procedure SetRGBBios(Color, R, G, B: Integer); assembler;
 asm
     mov ax, $1010
     mov bx, word ptr Color
@@ -1623,7 +1623,7 @@ end;
 
 { set one DAC register via ports }
 {#U2823_0DB0}
-procedure U2823_0DB0(Color, R, G, B: Integer); assembler;
+procedure SetRGBPorts(Color, R, G, B: Integer); assembler;
 asm
     mov dx, $3C8
     mov al, byte ptr Color
@@ -1641,63 +1641,63 @@ end;
 
 { select the DAC routines for this machine }
 {#U2823_0DCF}
-procedure U2823_0DCF(CPU: Integer; UsePorts, NoWait: Byte);
+procedure SelectDacRoutines(CPU: Integer; UsePorts, NoWait: Byte);
 begin
   CPU := Abs(CPU);
   if (CPU = $56) or (CPU = $BA) or (CPU = $11E) or (CPU = $182) then
   begin
-    g_E7DA := CPU;
-    g_E7D8 := UsePorts;
-    g_E7D9 := NoWait;
-    if g_E7D9 = 0 then
+    VidCpuType := CPU;
+    VidUsePorts := UsePorts;
+    VidNoWait := NoWait;
+    if VidNoWait = 0 then
     begin
-      if g_E7D8 = 0 then
-        g_E7C4 := U2823_0C6E
-      else if g_E7DA >= $11E then
-        g_E7C4 := U2823_0CC2
+      if VidUsePorts = 0 then
+        PalBlockHook := SetDacBiosWait
+      else if VidCpuType >= $11E then
+        PalBlockHook := SetDacPortsWait286
       else
-        g_E7C4 := U2823_0C95;
+        PalBlockHook := SetDacPortsWait86;
     end
     else
     begin
-      if g_E7D8 = 0 then
-        g_E7C4 := U2823_0CEB
-      else if g_E7DA >= $11E then
-        g_E7C4 := U2823_0D32
+      if VidUsePorts = 0 then
+        PalBlockHook := SetDacBios
+      else if VidCpuType >= $11E then
+        PalBlockHook := SetDacPorts286
       else
-        g_E7C4 := U2823_0D08;
+        PalBlockHook := SetDacPorts86;
     end;
-    if g_E7D8 = 0 then
-      g_E7C0 := U2823_0CEB
-    else if g_E7DA >= $11E then
-      g_E7C0 := U2823_0D32
+    if VidUsePorts = 0 then
+      PalBlockNoWaitHook := SetDacBios
+    else if VidCpuType >= $11E then
+      PalBlockNoWaitHook := SetDacPorts286
     else
-      g_E7C0 := U2823_0D08;
-    if g_E7D9 = 0 then
+      PalBlockNoWaitHook := SetDacPorts86;
+    if VidNoWait = 0 then
     begin
-      if g_E7D8 = 0 then
-        g_E7C8 := U2823_0D59
+      if VidUsePorts = 0 then
+        RGBHook := SetRGBBiosAlt
       else
-        g_E7C8 := U2823_0D71;
+        RGBHook := SetRGBPortsWait;
     end
     else
     begin
-      if g_E7D8 = 0 then
-        g_E7C8 := U2823_0D98
+      if VidUsePorts = 0 then
+        RGBHook := SetRGBBios
       else
-        g_E7C8 := U2823_0DB0;
+        RGBHook := SetRGBPorts;
     end;
   end;
 end;
 
 {#U2823_0F17}
 begin
-  U2823_0DCF($56, 0, 0);
-  g_E7CC.x1 := 0;
-  g_E7CC.y1 := 0;
-  g_E7CC.x2 := 319;
-  g_E7CC.y2 := 199;
-  g_E7CC.Clip := True;
-  g_E7D6 := $A000;
-  U2823_0C5A;
+  SelectDacRoutines($56, 0, 0);
+  ClipView.x1 := 0;
+  ClipView.y1 := 0;
+  ClipView.x2 := 319;
+  ClipView.y2 := 199;
+  ClipView.Clip := True;
+  VideoSeg := $A000;
+  ClearVgaScreen;
 end.

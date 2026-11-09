@@ -93,6 +93,22 @@ if TARGET == 'BOMBCFG':
                     'U2968': set()}
 IMG_END_PARA = None  # filled by tools
 
+# readable names: notes/names.tsv maps the placeholder names (marker / DS offset
+# names such as U1B27_0047, Players_3F0E) to the identifiers used in the sources
+NAMES = {}
+_NT = os.path.join(_ROOT, 'notes', 'names.tsv')
+if os.path.exists(_NT):
+    for _l in open(_NT, encoding='utf-8'):
+        _p = _l.rstrip('\n').split('\t')
+        if len(_p) >= 2 and not _l.startswith('#'):
+            NAMES[_p[0].strip().upper()] = _p[1].strip().lstrip('!')
+OLDNAME = {v.upper(): k for k, v in NAMES.items()}
+
+
+def name_of(old):
+    """source identifier of a placeholder name (marker)"""
+    return NAMES.get(old.upper(), old)
+
 
 def seg_of(para):
     for s, n in UNITS:

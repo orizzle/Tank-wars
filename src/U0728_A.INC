@@ -1,50 +1,50 @@
 
 { 'YES' / 'NO' }
 {#U0728_0007}
-function U0728_0007(B: Boolean): string;
+function YesNoStr(B: Boolean): string;
 begin
-  if B then U0728_0007 := 'YES' else U0728_0007 := 'NO';
+  if B then YesNoStr := 'YES' else YesNoStr := 'NO';
 end;
 
 { 'ON' / 'OFF' }
 {#U0728_0043}
-function U0728_0043(B: Boolean): string;
+function OnOffStr(B: Boolean): string;
 begin
-  if B then U0728_0043 := 'ON' else U0728_0043 := 'OFF';
+  if B then OnOffStr := 'ON' else OnOffStr := 'OFF';
 end;
 
 { create the AI object for player I according to its name }
 {#U0728_0078}
-procedure U0728_0078(I: Integer);
+procedure CreateAIPlayer(I: Integer);
 begin
-  if Players_3F0E[I].Name = AINames_007C[1] then Tanks_3EE2[I] := New(PStupid, Init(I));
-  if Players_3F0E[I].Name = AINames_007C[2] then Tanks_3EE2[I] := New(PLobber, Init(I));
-  if Players_3F0E[I].Name = AINames_007C[3] then Tanks_3EE2[I] := New(PRifleman, Init(I));
-  if Players_3F0E[I].Name = AINames_007C[4] then Tanks_3EE2[I] := New(PLobShoot, Init(I));
-  if Players_3F0E[I].Name = AINames_007C[5] then Tanks_3EE2[I] := New(PWindless, Init(I));
-  if Players_3F0E[I].Name = AINames_007C[6] then Tanks_3EE2[I] := New(PTwanger, Init(I));
-  if Players_3F0E[I].Name = AINames_007C[7] then Tanks_3EE2[I] := New(PWindMaster, Init(I));
+  if Players[I].Name = AINames[1] then Tanks[I] := New(PStupid, Init(I));
+  if Players[I].Name = AINames[2] then Tanks[I] := New(PLobber, Init(I));
+  if Players[I].Name = AINames[3] then Tanks[I] := New(PRifleman, Init(I));
+  if Players[I].Name = AINames[4] then Tanks[I] := New(PLobShoot, Init(I));
+  if Players[I].Name = AINames[5] then Tanks[I] := New(PWindless, Init(I));
+  if Players[I].Name = AINames[6] then Tanks[I] := New(PTwanger, Init(I));
+  if Players[I].Name = AINames[7] then Tanks[I] := New(PWindMaster, Init(I));
 end;
 
 { reset player I to defaults }
 {#U0728_0216}
-procedure U0728_0216(I: Integer);
+procedure ResetPlayer(I: Integer);
 var
   J: Integer;
 begin
-  FillChar(Players_3F0E[I], SizeOf(TPlayer), 0);
-  FillChar(Rec_495A[I], SizeOf(T7DA), 0);
-  with Players_3F0E[I] do
+  FillChar(Players[I], SizeOf(TPlayer), 0);
+  FillChar(ShotLogRecs[I], SizeOf(T7DA), 0);
+  with Players[I] do
   begin
-    U26A9_0165(I, f00);
-    Name := 'Player ' + U2918_02FE(I);
+    SetPlayerNum(I, f00);
+    Name := 'Player ' + IntToStr(I);
     Weapon := 1;
     f26 := 0;
     Ammo[0] := 100;
-    Ammo[1] := g_E77C * 3;
-    Ammo[11] := 10 * g_E77C;
+    Ammo[1] := GamesToPlay * 3;
+    Ammo[11] := 10 * GamesToPlay;
     if Ammo[11] > 999 then Ammo[11] := 999;
-    if I > g_46B4 then Men := 0 else Men := 100;
+    if I > NumPlayers then Men := 0 else Men := 100;
     f1D := 90;
     f1F := 1;
     f23 := 1;
@@ -62,28 +62,28 @@ begin
       10: begin f60 := 1; f62 := 2; f64 := 2; end;
     end;
   end;
-  Control_E480[I] := 1;
+  Controls[I] := 1;
 end;
 
 { mouse check at startup }
 {#U0728_04D0}
-procedure U0728_04D0;
+procedure CheckMouse;
 begin
   TextColor(14);
   Writeln('  Checking for Microsoft Compatible Mouse....');
-  g_E78B := U2968_003B;
+  MouseIn := DetectMouse;
 end;
 
 { CPU detection message }
 {#U0728_05D8}
-procedure U0728_05D8;
+procedure ShowCpuType;
 var
   Dummy: Integer;
 begin
   TextMode(3);
   TextColor(9);
-  g_4656 := U2918_04A3;
-  case g_4656 of
+  CpuKind := CpuType;
+  case CpuKind of
     $56: Writeln('8088/86 Processor Detected. Extended graphics disabled.');
     $BA: Writeln('80186 Detected (What a unique computer!)');
     $11E: Writeln('80286 Detected.');
@@ -95,42 +95,42 @@ end;
 
 { init mouse cursor }
 {#U0728_06B1}
-procedure U0728_06B1;
+procedure InitMouseCursor;
 begin
-  U2968_00D7;
-  U2968_0000(MouseCursors_3730[0]);
+  MouseSoftReset;
+  SetMouseCursor(MouseCursors[0]);
 end;
 
 { title box }
 {#U0728_06D1}
-procedure U0728_06D1;
+procedure DrawTitleBox;
 begin
-  U0098_028C(10, 6, $136, $2A, $12, $0F, $11);
+  DrawPanel3D(10, 6, $136, $2A, $12, $0F, $11);
   SetColor(14);
-  SetTextStyle(g_E7E2, 0, 1);
+  SetTextStyle(FontEuro, 0, 1);
   SetTextJustify(1, 1);
-  OutTextXY($A3, $17, 'TANK WARS  ' + Version_0056);
-  OutTextXY($A2, $16, 'TANK WARS  ' + Version_0056);
-  OutTextXY($A1, $15, 'TANK WARS  ' + Version_0056);
+  OutTextXY($A3, $17, 'TANK WARS  ' + GameVersion);
+  OutTextXY($A2, $16, 'TANK WARS  ' + GameVersion);
+  OutTextXY($A1, $15, 'TANK WARS  ' + GameVersion);
   SetColor(12);
-  OutTextXY($A0, $14, 'TANK WARS  ' + Version_0056);
+  OutTextXY($A0, $14, 'TANK WARS  ' + GameVersion);
 end;
 
 { START button }
 {#U0728_07CE}
-procedure U0728_07CE;
+procedure DrawStartButton;
 begin
-  U0098_028C($47, $AB, $F8, $C5, $12, $0F, $11);
+  DrawPanel3D($47, $AB, $F8, $C5, $12, $0F, $11);
   SetColor(14);
-  SetTextStyle(g_E7E2, 0, 1);
+  SetTextStyle(FontEuro, 0, 1);
   SetTextJustify(1, 1);
   SetUserCharSize(1, 1, 3, 10);
-  for g_461E := 1 to 5 do
+  for LoopI := 1 to 5 do
   begin
-    OutTextXY(g_461E + $A0 + 3, g_461E + $B8 + (-2), 'START');
-    OutTextXY(g_461E + $A0 + 3, $B8 - g_461E + (-2), 'START');
-    OutTextXY($A0 - g_461E + 3, g_461E + $B8 + (-2), 'START');
-    OutTextXY($A0 - g_461E + 3, $B8 - g_461E + (-2), 'START');
+    OutTextXY(LoopI + $A0 + 3, LoopI + $B8 + (-2), 'START');
+    OutTextXY(LoopI + $A0 + 3, $B8 - LoopI + (-2), 'START');
+    OutTextXY($A0 - LoopI + 3, LoopI + $B8 + (-2), 'START');
+    OutTextXY($A0 - LoopI + 3, $B8 - LoopI + (-2), 'START');
   end;
   SetColor(12);
   OutTextXY($A3, $B6, 'START');
@@ -138,9 +138,9 @@ end;
 
 { 'Main Menu' header }
 {#U0728_08E6}
-procedure U0728_08E6;
+procedure DrawMainMenuHeader;
 begin
-  U0098_028C($76, $3F, $CA, $4D, $12, $0F, $11);
+  DrawPanel3D($76, $3F, $CA, $4D, $12, $0F, $11);
   SetColor(1);
   SetTextStyle(0, 0, 1);
   SetTextJustify(1, 1);
@@ -149,7 +149,7 @@ end;
 
 { "Effect / Flying" ON/OFF box }
 {#U0728_09B5}
-procedure U0728_09B5;
+procedure SoundOptionsDialog;
 var
   Buf: Pointer;
   Sel, Old, Hit: Integer;
@@ -157,14 +157,14 @@ var
 begin
   GetMem(Buf, $2EC);
   GetImage($21, $35, $6B, $57, Buf^);
-  U0098_028C($23, $37, $69, $55, $12, $0F, $11);
+  DrawPanel3D($23, $37, $69, $55, $12, $0F, $11);
   SetColor(0);
   SetTextJustify(0, 1);
   OutTextXY($28, $3E, 'Effect: ');
   OutTextXY($28, $4C, 'Flying: ');
   SetColor(14);
-  OutTextXY($55, $3E, U0728_0043(Boolean(g_E788)));
-  OutTextXY($55, $4C, U0728_0043(Boolean(g_E787)));
+  OutTextXY($55, $3E, OnOffStr(Boolean(SoundOn)));
+  OutTextXY($55, $4C, OnOffStr(Boolean(FlySound)));
   Sel := 0;
   Hit := -1;
   Done := False;
@@ -175,73 +175,73 @@ begin
     KRt := MB1;
     KTog := MB1;
     repeat
-      U0098_03A8($1D, 14 * Sel + $3E);
-      U0098_03A8($6F, 14 * Sel + $3E);
-      U2968_004D;
+      DrawPlusMark($1D, 14 * Sel + $3E);
+      DrawPlusMark($6F, 14 * Sel + $3E);
+      ShowMouseCursor;
       Old := Sel;
       repeat
         if KeyPressed then
         begin
-          g_46C9 := ReadKey;
-          if g_46C9 in [' '] then
+          KeyChar := ReadKey;
+          if KeyChar in [' '] then
           begin
             Hit := Sel;
             KTog := True;
           end;
-          if g_46C9 in [#13, #27] then Hit := 2;
-          if g_46C9 = #0 then
+          if KeyChar in [#13, #27] then Hit := 2;
+          if KeyChar = #0 then
           begin
-            g_46C9 := ReadKey;
-            if (g_46C9 = KeyUp_3716) and (Sel = 1) then Dec(Sel);
-            if (g_46C9 = KeyDn_3717) and (Sel = 0) then Inc(Sel);
-            if g_46C9 = KeyRt_3718 then
+            KeyChar := ReadKey;
+            if (KeyChar = ScanUp) and (Sel = 1) then Dec(Sel);
+            if (KeyChar = ScanDown) and (Sel = 0) then Inc(Sel);
+            if KeyChar = ScanRight then
             begin
               Hit := Sel;
               KRt := True;
             end;
-            if g_46C9 = KeyLt_3719 then
+            if KeyChar = ScanLeft then
             begin
               Hit := Sel;
               KLt := True;
             end;
           end;
         end;
-        if U2968_0077(1) or U2968_0077(2) then
+        if MouseBtnsDown(1) or MouseBtnsDown(2) then
         begin
-          MB1 := U2968_0077(1);
-          MB2 := U2968_0077(2);
-          g_4624 := U2918_022A;
-          g_4626 := U2918_0256;
-          if (g_4624 > $23) and (g_4624 < $69) then
+          MB1 := MouseBtnsDown(1);
+          MB2 := MouseBtnsDown(2);
+          TmpX := MouseX;
+          TmpY := MouseY;
+          if (TmpX > $23) and (TmpX < $69) then
           begin
-            if (g_4626 > $39) and (g_4626 <= $46) then Hit := 0
-            else if (g_4626 > $46) and (g_4626 < $53) then Hit := 1
+            if (TmpY > $39) and (TmpY <= $46) then Hit := 0
+            else if (TmpY > $46) and (TmpY < $53) then Hit := 1
             else Hit := 2;
           end
           else Hit := 2;
-          repeat until not U2968_0077(1) and not U2968_0077(2);
+          repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
           if Hit >= 0 then Sel := Hit;
         end;
       until (Old <> Sel) or (Hit >= 0);
-      U2968_005A;
-      U0098_03F4($1D, 14 * Old + $3E, SaveBuf_E496);
-      U0098_03F4($6F, 14 * Old + $3E, SaveBuf_E496);
+      HideMouseCursor;
+      ErasePlusMark($1D, 14 * Old + $3E, SaveBuf);
+      ErasePlusMark($6F, 14 * Old + $3E, SaveBuf);
     until Hit in [0..2];
     SetFillStyle(1, $12);
     case Hit of
       0: begin
-           if KRt or MB2 then g_E788 := 1;
-           if KLt or MB1 then g_E788 := 0;
-           if KTog then g_E788 := Byte(g_E788 = 0);
+           if KRt or MB2 then SoundOn := 1;
+           if KLt or MB1 then SoundOn := 0;
+           if KTog then SoundOn := Byte(SoundOn = 0);
            Bar($55, $3A, $65, $42);
-           OutTextXY($55, $3E, U0728_0043(Boolean(g_E788)));
+           OutTextXY($55, $3E, OnOffStr(Boolean(SoundOn)));
          end;
       1: begin
-           if KRt or MB2 then g_E787 := 1;
-           if KLt or MB1 then g_E787 := 0;
-           if KTog then g_E787 := Byte(g_E787 = 0);
+           if KRt or MB2 then FlySound := 1;
+           if KLt or MB1 then FlySound := 0;
+           if KTog then FlySound := Byte(FlySound = 0);
            Bar($55, $48, $65, $50);
-           OutTextXY($55, $4C, U0728_0043(Boolean(g_E787)));
+           OutTextXY($55, $4C, OnOffStr(Boolean(FlySound)));
          end;
       2: Done := True;
     end;
@@ -253,54 +253,54 @@ end;
 
 { background type name }
 {#U0728_0DEF}
-function U0728_0DEF(N: Integer): string;
+function BackgroundName(N: Integer): string;
 begin
   case N of
-    0: U0728_0DEF := 'None';
-    1: U0728_0DEF := 'Stars';
-    2: U0728_0DEF := 'Bars';
-    3: U0728_0DEF := 'Circles';
-    4: U0728_0DEF := 'Spread';
-    5: U0728_0DEF := 'Sky';
-    6: U0728_0DEF := 'Static';
-    7: U0728_0DEF := 'Rectangle';
-    8: U0728_0DEF := 'Asterisk';
-    9: U0728_0DEF := 'RND';
-    10: U0728_0DEF := 'USER';
+    0: BackgroundName := 'None';
+    1: BackgroundName := 'Stars';
+    2: BackgroundName := 'Bars';
+    3: BackgroundName := 'Circles';
+    4: BackgroundName := 'Spread';
+    5: BackgroundName := 'Sky';
+    6: BackgroundName := 'Static';
+    7: BackgroundName := 'Rectangle';
+    8: BackgroundName := 'Asterisk';
+    9: BackgroundName := 'RND';
+    10: BackgroundName := 'USER';
   end;
 end;
 
 { wall type name }
 {#U0728_0F3B}
-function U0728_0F3B(N: Integer): string;
+function WallTypeName(N: Integer): string;
 begin
   case N of
-    0: U0728_0F3B := 'NO';
-    1: U0728_0F3B := 'STICK';
-    2: U0728_0F3B := 'ELASTIC';
-    3: U0728_0F3B := 'ACCEL';
-    4: U0728_0F3B := 'WARP';
-    5: U0728_0F3B := 'RND';
+    0: WallTypeName := 'NO';
+    1: WallTypeName := 'STICK';
+    2: WallTypeName := 'ELASTIC';
+    3: WallTypeName := 'ACCEL';
+    4: WallTypeName := 'WARP';
+    5: WallTypeName := 'RND';
   end;
 end;
 
 { wind force name }
 {#U0728_0FFC}
-function U0728_0FFC(N: Integer): string;
+function WindForceName(N: Integer): string;
 begin
   case N of
-    0: U0728_0FFC := 'None';
-    1: U0728_0FFC := 'Low';
-    2: U0728_0FFC := 'Norm';
-    3: U0728_0FFC := 'High';
-    4: U0728_0FFC := 'Gale';
-    5: U0728_0FFC := 'RND';
+    0: WindForceName := 'None';
+    1: WindForceName := 'Low';
+    2: WindForceName := 'Norm';
+    3: WindForceName := 'High';
+    4: WindForceName := 'Gale';
+    5: WindForceName := 'RND';
   end;
 end;
 
 { "Game Options" box: 10 settings, changed with cursor keys / space / mouse }
 {#U0728_1186}
-procedure U0728_1186;
+procedure GameOptionsDialog;
 var
   Buf: Pointer;
   Sel, Old, Hit: Integer;
@@ -309,7 +309,7 @@ var
 begin
   GetMem(Buf, $F64);
   GetImage($5D, $2D, $E3, $9B, Buf^);
-  U0098_028C($5F, $2F, $E1, $99, $12, $0F, $11);
+  DrawPanel3D($5F, $2F, $E1, $99, $12, $0F, $11);
   SetColor(0);
   SetTextJustify(0, 1);
   OutTextXY($64, $34, 'Crumble Percent:');
@@ -324,16 +324,16 @@ begin
   OutTextXY($64, $8E, 'Team Play:');
   SetTextJustify(2, 1);
   SetColor(14);
-  OutTextXY($DF, $34, U2918_02FE(g_E77A) + '%');
-  OutTextXY($DF, $3E, U0728_0F3B(g_E780));
-  OutTextXY($DF, $48, U0728_0007(Boolean(g_E78A)));
-  OutTextXY($DF, $52, U0728_0007(g_E789 = 0));
-  OutTextXY($DF, $5C, U0728_0007(Boolean(g_E78D)));
-  OutTextXY($DF, $66, U0728_0007(Boolean(g_E78F)));
-  OutTextXY($DF, $70, U0728_0DEF(g_E782));
-  OutTextXY($DF, $7A, U2918_02FE(g_E796));
-  OutTextXY($DF, $84, U0728_0FFC(g_E77E));
-  OutTextXY($DF, $8E, U0728_0007(Boolean(g_E791)));
+  OutTextXY($DF, $34, IntToStr(CrumblePct) + '%');
+  OutTextXY($DF, $3E, WallTypeName(WallControl));
+  OutTextXY($DF, $48, YesNoStr(Boolean(ShotTrail)));
+  OutTextXY($DF, $52, YesNoStr(InvisoBall = 0));
+  OutTextXY($DF, $5C, YesNoStr(Boolean(TanksFall)));
+  OutTextXY($DF, $66, YesNoStr(Boolean(CompuBuy)));
+  OutTextXY($DF, $70, BackgroundName(BackControl));
+  OutTextXY($DF, $7A, IntToStr(PalSpeed));
+  OutTextXY($DF, $84, WindForceName(WindControl));
+  OutTextXY($DF, $8E, YesNoStr(Boolean(TeamPlay)));
   Sel := 0;
   Hit := -1;
   Done := False;
@@ -344,64 +344,64 @@ begin
     KRt := MB1;
     KTog := MB1;
     repeat
-      U0098_03A8($59, 10 * Sel + $34);
-      U0098_03A8($E7, 10 * Sel + $34);
-      U2968_004D;
+      DrawPlusMark($59, 10 * Sel + $34);
+      DrawPlusMark($E7, 10 * Sel + $34);
+      ShowMouseCursor;
       Old := Sel;
       repeat
         if KeyPressed then
         begin
-          g_46C9 := ReadKey;
-          if g_46C9 in [' '] then
+          KeyChar := ReadKey;
+          if KeyChar in [' '] then
           begin
             Hit := Sel;
             KTog := True;
           end;
-          if g_46C9 in [#13, #27] then Hit := 10;
-          if g_46C9 = #0 then
+          if KeyChar in [#13, #27] then Hit := 10;
+          if KeyChar = #0 then
           begin
-            g_46C9 := ReadKey;
-            if (g_46C9 = KeyUp_3716) and (Sel > 0) then Dec(Sel);
-            if (g_46C9 = KeyDn_3717) and (Sel < 9) then Inc(Sel);
-            if g_46C9 = KeyRt_3718 then
+            KeyChar := ReadKey;
+            if (KeyChar = ScanUp) and (Sel > 0) then Dec(Sel);
+            if (KeyChar = ScanDown) and (Sel < 9) then Inc(Sel);
+            if KeyChar = ScanRight then
             begin
               Hit := Sel;
               KRt := True;
             end;
-            if g_46C9 = KeyLt_3719 then
+            if KeyChar = ScanLeft then
             begin
               Hit := Sel;
               KLt := True;
             end;
           end;
         end;
-        if U2968_0077(1) or U2968_0077(2) then
+        if MouseBtnsDown(1) or MouseBtnsDown(2) then
         begin
-          MB1 := U2968_0077(1);
-          MB2 := U2968_0077(2);
-          g_4624 := U2918_022A;
-          g_4626 := U2918_0256;
-          if (g_4624 > $5F) and (g_4624 < $E1) then
+          MB1 := MouseBtnsDown(1);
+          MB2 := MouseBtnsDown(2);
+          TmpX := MouseX;
+          TmpY := MouseY;
+          if (TmpX > $5F) and (TmpX < $E1) then
           begin
-            if (g_4626 > $31) and (g_4626 <= $3A) then Hit := 0
-            else if (g_4626 > $3A) and (g_4626 <= $44) then Hit := 1
-            else if (g_4626 > $44) and (g_4626 <= $4E) then Hit := 2
-            else if (g_4626 > $4E) and (g_4626 <= $58) then Hit := 3
-            else if (g_4626 > $58) and (g_4626 <= $62) then Hit := 4
-            else if (g_4626 > $62) and (g_4626 <= $6C) then Hit := 5
-            else if (g_4626 > $6C) and (g_4626 <= $76) then Hit := 6
-            else if (g_4626 > $76) and (g_4626 <= $80) then Hit := 7
-            else if (g_4626 > $80) and (g_4626 <= $8A) then Hit := 8
-            else if (g_4626 > $8A) and (g_4626 < $99) then Hit := 9
+            if (TmpY > $31) and (TmpY <= $3A) then Hit := 0
+            else if (TmpY > $3A) and (TmpY <= $44) then Hit := 1
+            else if (TmpY > $44) and (TmpY <= $4E) then Hit := 2
+            else if (TmpY > $4E) and (TmpY <= $58) then Hit := 3
+            else if (TmpY > $58) and (TmpY <= $62) then Hit := 4
+            else if (TmpY > $62) and (TmpY <= $6C) then Hit := 5
+            else if (TmpY > $6C) and (TmpY <= $76) then Hit := 6
+            else if (TmpY > $76) and (TmpY <= $80) then Hit := 7
+            else if (TmpY > $80) and (TmpY <= $8A) then Hit := 8
+            else if (TmpY > $8A) and (TmpY < $99) then Hit := 9
             else Hit := 10;
           end
           else Hit := 10;
           if Hit >= 0 then Sel := Hit;
         end;
       until (Old <> Sel) or (Hit >= 0);
-      U2968_005A;
-      U0098_03F4($59, 10 * Old + $34, SaveBuf_E496);
-      U0098_03F4($E7, 10 * Old + $34, SaveBuf_E496);
+      HideMouseCursor;
+      ErasePlusMark($59, 10 * Old + $34, SaveBuf);
+      ErasePlusMark($E7, 10 * Old + $34, SaveBuf);
     until Hit in [0..10];
     SetColor(14);
     SetFillStyle(1, $12);
@@ -409,108 +409,108 @@ begin
     NewVal := 0;
     case Hit of
       0: begin
-           OldVal := g_E77A;
-           if (KRt or MB2) and (g_E77A < 100) then Inc(g_E77A);
-           if (KLt or MB1) and (g_E77A > 0) then Dec(g_E77A);
-           if KTog then g_E77A := g_E77A + 5;
-           if g_E77A > 100 then g_E77A := g_E77A - 100;
+           OldVal := CrumblePct;
+           if (KRt or MB2) and (CrumblePct < 100) then Inc(CrumblePct);
+           if (KLt or MB1) and (CrumblePct > 0) then Dec(CrumblePct);
+           if KTog then CrumblePct := CrumblePct + 5;
+           if CrumblePct > 100 then CrumblePct := CrumblePct - 100;
            Bar($C3, $30, $E1, $38);
-           OutTextXY($DF, $34, U2918_02FE(g_E77A) + '%');
-           NewVal := g_E77A;
+           OutTextXY($DF, $34, IntToStr(CrumblePct) + '%');
+           NewVal := CrumblePct;
          end;
       1: begin
-           OldVal := g_E780;
-           if (KRt or MB2) and (g_E780 < 5) then Inc(g_E780);
-           if (KLt or MB1) and (g_E780 > 0) then Dec(g_E780);
-           if KTog then g_E780 := (g_E780 + 1) mod 6;
+           OldVal := WallControl;
+           if (KRt or MB2) and (WallControl < 5) then Inc(WallControl);
+           if (KLt or MB1) and (WallControl > 0) then Dec(WallControl);
+           if KTog then WallControl := (WallControl + 1) mod 6;
            Bar($AF, $3A, $E1, $42);
-           OutTextXY($DF, $3E, U0728_0F3B(g_E780));
-           repeat until not U2968_0077(1) and not U2968_0077(2);
-           NewVal := g_E780;
+           OutTextXY($DF, $3E, WallTypeName(WallControl));
+           repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
+           NewVal := WallControl;
          end;
       2: begin
-           OldVal := g_E78A;
-           if KRt or MB2 then g_E78A := 1;
-           if KLt or MB1 then g_E78A := 0;
-           if KTog then g_E78A := Byte(g_E78A = 0);
+           OldVal := ShotTrail;
+           if KRt or MB2 then ShotTrail := 1;
+           if KLt or MB1 then ShotTrail := 0;
+           if KTog then ShotTrail := Byte(ShotTrail = 0);
            Bar($C3, $44, $E1, $4C);
-           OutTextXY($DF, $48, U0728_0007(Boolean(g_E78A)));
-           repeat until not U2968_0077(1) and not U2968_0077(2);
-           NewVal := g_E78A;
+           OutTextXY($DF, $48, YesNoStr(Boolean(ShotTrail)));
+           repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
+           NewVal := ShotTrail;
          end;
       3: begin
-           OldVal := Byte(g_E789 = 0);
-           if KRt or MB2 then g_E789 := 0;
-           if KLt or MB1 then g_E789 := 1;
-           if KTog then g_E789 := Byte(g_E789 = 0);
+           OldVal := Byte(InvisoBall = 0);
+           if KRt or MB2 then InvisoBall := 0;
+           if KLt or MB1 then InvisoBall := 1;
+           if KTog then InvisoBall := Byte(InvisoBall = 0);
            Bar($C3, $4E, $E1, $56);
-           OutTextXY($DF, $52, U0728_0007(g_E789 = 0));
-           repeat until not U2968_0077(1) and not U2968_0077(2);
-           NewVal := Byte(g_E789 = 0);
+           OutTextXY($DF, $52, YesNoStr(InvisoBall = 0));
+           repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
+           NewVal := Byte(InvisoBall = 0);
          end;
       4: begin
-           OldVal := g_E78D;
-           if KRt or MB2 then g_E78D := 1;
-           if KLt or MB1 then g_E78D := 0;
-           if KTog then g_E78D := Byte(g_E78D = 0);
+           OldVal := TanksFall;
+           if KRt or MB2 then TanksFall := 1;
+           if KLt or MB1 then TanksFall := 0;
+           if KTog then TanksFall := Byte(TanksFall = 0);
            Bar($C3, $58, $E1, $60);
-           OutTextXY($DF, $5C, U0728_0007(Boolean(g_E78D)));
-           repeat until not U2968_0077(1) and not U2968_0077(2);
-           NewVal := g_E78D;
+           OutTextXY($DF, $5C, YesNoStr(Boolean(TanksFall)));
+           repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
+           NewVal := TanksFall;
          end;
       5: begin
-           OldVal := g_E78F;
-           if KRt or MB2 then g_E78F := 1;
-           if KLt or MB1 then g_E78F := 0;
-           if KTog then g_E78F := Byte(g_E78F = 0);
+           OldVal := CompuBuy;
+           if KRt or MB2 then CompuBuy := 1;
+           if KLt or MB1 then CompuBuy := 0;
+           if KTog then CompuBuy := Byte(CompuBuy = 0);
            Bar($C3, $62, $E1, $6A);
-           OutTextXY($DF, $66, U0728_0007(Boolean(g_E78F)));
-           repeat until not U2968_0077(1) and not U2968_0077(2);
-           NewVal := g_E78F;
+           OutTextXY($DF, $66, YesNoStr(Boolean(CompuBuy)));
+           repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
+           NewVal := CompuBuy;
          end;
       6: begin
-           OldVal := g_E782;
-           if (KRt or MB2) and (g_E782 < 10) then Inc(g_E782);
-           if (KLt or MB1) and (g_E782 > 0) then Dec(g_E782);
-           if KTog then g_E782 := (g_E782 + 1) mod 11;
+           OldVal := BackControl;
+           if (KRt or MB2) and (BackControl < 10) then Inc(BackControl);
+           if (KLt or MB1) and (BackControl > 0) then Dec(BackControl);
+           if KTog then BackControl := (BackControl + 1) mod 11;
            Bar($A5, $6C, $E1, $76);
-           OutTextXY($DF, $70, U0728_0DEF(g_E782));
-           repeat until not U2968_0077(1) and not U2968_0077(2);
-           NewVal := g_E782;
+           OutTextXY($DF, $70, BackgroundName(BackControl));
+           repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
+           NewVal := BackControl;
          end;
       7: begin
-           OldVal := g_E796;
-           if (KRt or MB2) and (g_E796 < 250) then Inc(g_E796);
-           if (KLt or MB1) and (g_E796 > 0) then Dec(g_E796);
+           OldVal := PalSpeed;
+           if (KRt or MB2) and (PalSpeed < 250) then Inc(PalSpeed);
+           if (KLt or MB1) and (PalSpeed > 0) then Dec(PalSpeed);
            if KTog then
-             if g_E796 > 0 then g_E796 := 0 else g_E796 := 1;
-           U27D4_008D(PalCycle_9FB8);
-           PalCycle_9FB8.Speed := g_E796;
-           U27D4_003D(PalCycle_9FB8);
+             if PalSpeed > 0 then PalSpeed := 0 else PalSpeed := 1;
+           GetPalCycle(PalCycle);
+           PalCycle.Speed := PalSpeed;
+           SetPalCycle(PalCycle);
            Bar($C3, $76, $E1, $7E);
-           OutTextXY($DF, $7A, U2918_02FE(g_E796));
-           NewVal := g_E796;
+           OutTextXY($DF, $7A, IntToStr(PalSpeed));
+           NewVal := PalSpeed;
          end;
       8: begin
-           OldVal := g_E77E;
-           if (KRt or MB2) and (g_E77E < 5) then Inc(g_E77E);
-           if (KLt or MB1) and (g_E77E > 0) then Dec(g_E77E);
-           if KTog then Inc(g_E77E);
-           if g_E77E > 5 then g_E77E := 0;
+           OldVal := WindControl;
+           if (KRt or MB2) and (WindControl < 5) then Inc(WindControl);
+           if (KLt or MB1) and (WindControl > 0) then Dec(WindControl);
+           if KTog then Inc(WindControl);
+           if WindControl > 5 then WindControl := 0;
            Bar($C3, $80, $E1, $8A);
-           OutTextXY($DF, $84, U0728_0FFC(g_E77E));
-           repeat until not U2968_0077(1) and not U2968_0077(2);
-           NewVal := g_E77E;
+           OutTextXY($DF, $84, WindForceName(WindControl));
+           repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
+           NewVal := WindControl;
          end;
       9: begin
-           OldVal := g_E791;
-           if KRt or MB2 then g_E791 := 1;
-           if KLt or MB1 then g_E791 := 0;
-           if KTog then g_E791 := Byte(g_E791 = 0);
+           OldVal := TeamPlay;
+           if KRt or MB2 then TeamPlay := 1;
+           if KLt or MB1 then TeamPlay := 0;
+           if KTog then TeamPlay := Byte(TeamPlay = 0);
            Bar($C3, $8A, $E1, $92);
-           OutTextXY($DF, $8E, U0728_0007(Boolean(g_E791)));
-           repeat until not U2968_0077(1) and not U2968_0077(2);
-           NewVal := g_E791;
+           OutTextXY($DF, $8E, YesNoStr(Boolean(TeamPlay)));
+           repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
+           NewVal := TeamPlay;
          end;
       10: Done := True;
     end;
@@ -521,45 +521,45 @@ begin
 end;
 
 { main menu: Sound Options / Game Options / Players / Games / START,
-  plus the "Load Game" button (sets g_46F1) }
+  plus the "Load Game" button (sets LoadRequested) }
 {#U0728_1DD5}
-procedure U0728_1DD5;
+procedure RunMainMenu;
 var
   Sel, Old, OldVal, Hit: Integer;
   KLt, KRt, KTog, MB1, MB2, Done: Boolean;
 begin
-  U0098_028C($76, $55, $CA, $BB, $12, $0F, $11);
+  DrawPanel3D($76, $55, $CA, $BB, $12, $0F, $11);
   SetColor(10);
   SetTextStyle(2, 0, 1);
   SetUserCharSize(1, 1, 1, 1);
-  U0098_028C($7A, $5B, $C6, $65, 2, $11, $0F);
-  U2823_00CC($7A, $5B, $C6, $65, SaveBuf_E496);
+  DrawPanel3D($7A, $5B, $C6, $65, 2, $11, $0F);
+  CopyBar($7A, $5B, $C6, $65, SaveBuf);
   SetTextJustify(1, 1);
   OutTextXY($A0, $5F, 'Sound Options');
-  U0098_028C($7A, $6F, $C6, $79, 2, $11, $0F);
-  U2823_00CC($7A, $6F, $C6, $79, SaveBuf_E496);
+  DrawPanel3D($7A, $6F, $C6, $79, 2, $11, $0F);
+  CopyBar($7A, $6F, $C6, $79, SaveBuf);
   SetTextJustify(1, 1);
   OutTextXY($A0, $73, 'Game Options');
-  U0098_028C($7A, $83, $C6, $8D, 2, $11, $0F);
-  U2823_00CC($7A, $83, $C6, $8D, SaveBuf_E496);
+  DrawPanel3D($7A, $83, $C6, $8D, 2, $11, $0F);
+  CopyBar($7A, $83, $C6, $8D, SaveBuf);
   SetTextJustify(1, 1);
   OutTextXY($A0, $87, 'Players: ');
   SetColor(14);
-  OutTextXY(TextWidth('Players: ') div 2 + $A0, $87, U2918_02FE(g_46B4));
-  U0098_028C($7A, $97, $C6, $A1, 2, $11, $0F);
-  U2823_00CC($7A, $97, $C6, $A1, SaveBuf_E496);
+  OutTextXY(TextWidth('Players: ') div 2 + $A0, $87, IntToStr(NumPlayers));
+  DrawPanel3D($7A, $97, $C6, $A1, 2, $11, $0F);
+  CopyBar($7A, $97, $C6, $A1, SaveBuf);
   SetTextJustify(1, 1);
   SetColor(10);
   OutTextXY($A0, $9B, 'Games: ');
   SetColor(14);
-  OutTextXY(TextWidth('Games: ') div 2 + $A0, $9B, U2918_02FE(g_E77C));
-  U0098_028C($7A, $AB, $C6, $B5, 2, $11, $0F);
-  U2823_00CC($7A, $AB, $C6, $B5, SaveBuf_E496);
+  OutTextXY(TextWidth('Games: ') div 2 + $A0, $9B, IntToStr(GamesToPlay));
+  DrawPanel3D($7A, $AB, $C6, $B5, 2, $11, $0F);
+  CopyBar($7A, $AB, $C6, $B5, SaveBuf);
   SetTextJustify(1, 1);
   SetColor(13);
   OutTextXY($A0, $AF, 'START');
   SetTextJustify(1, 1);
-  U0098_028C($14, $91, $50, $9B, $12, $0F, $11);
+  DrawPanel3D($14, $91, $50, $9B, $12, $0F, $11);
   SetColor(10);
   OutTextXY($32, $95, 'Load Game');
   SetColor(12);
@@ -575,102 +575,102 @@ begin
     KRt := MB1;
     KTog := MB1;
     repeat
-      U0098_03A8($70, 20 * Sel + $5F);
-      U0098_03A8($D0, 20 * Sel + $5F);
-      U2968_004D;
+      DrawPlusMark($70, 20 * Sel + $5F);
+      DrawPlusMark($D0, 20 * Sel + $5F);
+      ShowMouseCursor;
       Old := Sel;
       repeat
         if KeyPressed then
         begin
-          g_46C9 := ReadKey;
-          if g_46C9 in [#13, ' '] then
+          KeyChar := ReadKey;
+          if KeyChar in [#13, ' '] then
           begin
             Hit := Sel;
             KTog := True;
           end;
-          if g_46C9 in ['L', 'l'] then g_46F1 := 1;
-          if g_46C9 = #0 then
+          if KeyChar in ['L', 'l'] then LoadRequested := 1;
+          if KeyChar = #0 then
           begin
-            g_46C9 := ReadKey;
-            if (g_46C9 = KeyUp_3716) and (Sel > 0) then Dec(Sel);
-            if (g_46C9 = KeyDn_3717) and (Sel < 4) then Inc(Sel);
-            if g_46C9 = KeyRt_3718 then
+            KeyChar := ReadKey;
+            if (KeyChar = ScanUp) and (Sel > 0) then Dec(Sel);
+            if (KeyChar = ScanDown) and (Sel < 4) then Inc(Sel);
+            if KeyChar = ScanRight then
             begin
               KRt := True;
               Hit := Sel;
             end;
-            if g_46C9 = KeyLt_3719 then
+            if KeyChar = ScanLeft then
             begin
               KLt := True;
               Hit := Sel;
             end;
           end;
         end;
-        if U2968_0077(1) or U2968_0077(2) then
+        if MouseBtnsDown(1) or MouseBtnsDown(2) then
         begin
-          g_4624 := U2918_022A;
-          g_4626 := U2918_0256;
-          MB1 := U2968_0077(1);
-          MB2 := U2968_0077(2);
-          if (g_4624 > $7A) and (g_4624 < $C6) then
+          TmpX := MouseX;
+          TmpY := MouseY;
+          MB1 := MouseBtnsDown(1);
+          MB2 := MouseBtnsDown(2);
+          if (TmpX > $7A) and (TmpX < $C6) then
           begin
-            if (g_4626 >= $5B) and (g_4626 <= $65) then Hit := 0;
-            if (g_4626 >= $6F) and (g_4626 <= $79) then Hit := 1;
-            if (g_4626 >= $83) and (g_4626 <= $8D) then Hit := 2;
-            if (g_4626 >= $97) and (g_4626 <= $A1) then Hit := 3;
-            if (g_4626 >= $AB) and (g_4626 <= $B5) then Hit := 4;
-            repeat until not U2968_0077(1) and not U2968_0077(2);
+            if (TmpY >= $5B) and (TmpY <= $65) then Hit := 0;
+            if (TmpY >= $6F) and (TmpY <= $79) then Hit := 1;
+            if (TmpY >= $83) and (TmpY <= $8D) then Hit := 2;
+            if (TmpY >= $97) and (TmpY <= $A1) then Hit := 3;
+            if (TmpY >= $AB) and (TmpY <= $B5) then Hit := 4;
+            repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
           end;
-          if (g_4624 > $14) and (g_4624 < $50) and (g_4626 > $91) and (g_4626 < $9B) then
-            g_46F1 := 1;
+          if (TmpX > $14) and (TmpX < $50) and (TmpY > $91) and (TmpY < $9B) then
+            LoadRequested := 1;
           if Hit >= 0 then Sel := Hit;
         end;
-      until (Old <> Sel) or (Hit >= 0) or (g_46F1 <> 0);
-      U2968_005A;
-      U0098_03F4($70, 20 * Old + $5F, SaveBuf_E496);
-      U0098_03F4($D0, 20 * Old + $5F, SaveBuf_E496);
-    until (Hit in [0..4]) or (g_46F1 <> 0);
+      until (Old <> Sel) or (Hit >= 0) or (LoadRequested <> 0);
+      HideMouseCursor;
+      ErasePlusMark($70, 20 * Old + $5F, SaveBuf);
+      ErasePlusMark($D0, 20 * Old + $5F, SaveBuf);
+    until (Hit in [0..4]) or (LoadRequested <> 0);
     SetColor(14);
-    if g_46F1 = 0 then
+    if LoadRequested = 0 then
       case Hit of
-        0: if KTog or MB1 or MB2 then U0728_09B5;
-        1: if KTog or MB1 or MB2 then U0728_1186;
+        0: if KTog or MB1 or MB2 then SoundOptionsDialog;
+        1: if KTog or MB1 or MB2 then GameOptionsDialog;
         2: begin
-             OldVal := g_46B4;
-             if (KRt or MB2) and (g_46B4 < 10) then Inc(g_46B4);
-             if (KLt or MB1) and (g_46B4 > 2) then Dec(g_46B4);
-             if KTog then Inc(g_46B4);
-             if g_46B4 > 10 then g_46B4 := 2;
+             OldVal := NumPlayers;
+             if (KRt or MB2) and (NumPlayers < 10) then Inc(NumPlayers);
+             if (KLt or MB1) and (NumPlayers > 2) then Dec(NumPlayers);
+             if KTog then Inc(NumPlayers);
+             if NumPlayers > 10 then NumPlayers := 2;
              SetTextJustify(1, 1);
-             U2823_00CC(TextWidth('Players: ') div 2 + $A0 - 4, $85,
-                        TextWidth('Players: ') div 2 + $A0 + 10, $8B, SaveBuf_E496);
-             OutTextXY(TextWidth('Players: ') div 2 + $A0, $87, U2918_02FE(g_46B4));
+             CopyBar(TextWidth('Players: ') div 2 + $A0 - 4, $85,
+                        TextWidth('Players: ') div 2 + $A0 + 10, $8B, SaveBuf);
+             OutTextXY(TextWidth('Players: ') div 2 + $A0, $87, IntToStr(NumPlayers));
            end;
         3: begin
-             OldVal := g_E77C;
-             if KRt and (g_E77C < 99) then Inc(g_E77C);
-             if MB2 and (g_E77C < 99) then Inc(g_E77C, 5);
-             if KLt and (g_E77C > 1) then Dec(g_E77C);
-             if MB1 and (g_E77C > 1) then Dec(g_E77C, 5);
-             if g_E77C > 99 then g_E77C := 99;
-             if g_E77C < 1 then g_E77C := 1;
-             if KTog then Inc(g_E77C, 5);
-             if g_E77C > 99 then Dec(g_E77C, 99);
+             OldVal := GamesToPlay;
+             if KRt and (GamesToPlay < 99) then Inc(GamesToPlay);
+             if MB2 and (GamesToPlay < 99) then Inc(GamesToPlay, 5);
+             if KLt and (GamesToPlay > 1) then Dec(GamesToPlay);
+             if MB1 and (GamesToPlay > 1) then Dec(GamesToPlay, 5);
+             if GamesToPlay > 99 then GamesToPlay := 99;
+             if GamesToPlay < 1 then GamesToPlay := 1;
+             if KTog then Inc(GamesToPlay, 5);
+             if GamesToPlay > 99 then Dec(GamesToPlay, 99);
              SetTextJustify(1, 1);
-             U2823_00CC(TextWidth('Games: ') div 2 + $A0 - 5, $99,
-                        TextWidth('Games: ') div 2 + $A0 + 15, $9F, SaveBuf_E496);
-             OutTextXY(TextWidth('Games: ') div 2 + $A0, $9B, U2918_02FE(g_E77C));
+             CopyBar(TextWidth('Games: ') div 2 + $A0 - 5, $99,
+                        TextWidth('Games: ') div 2 + $A0 + 15, $9F, SaveBuf);
+             OutTextXY(TextWidth('Games: ') div 2 + $A0, $9B, IntToStr(GamesToPlay));
            end;
         4: Done := True;
       end;
     Hit := -1;
-  until Done or (g_46F1 <> 0);
+  until Done or (LoadRequested <> 0);
 end;
 
 { "Team Setup" screen: assign each player to a team (1..number of players);
-  cancels team play (g_E791 := 0) unless at least one team has 2+ members }
+  cancels team play (TeamPlay := 0) unless at least one team has 2+ members }
 {#U0728_2609}
-procedure U0728_2609;
+procedure TeamSetupScreen;
 var
   Sel, Old: Integer;
   Down, Up: Boolean;
@@ -680,11 +680,11 @@ begin
   SetTextStyle(2, 0, 1);
   SetUserCharSize(1, 1, 1, 1);
   SetTextJustify(1, 0);
-  U0098_028C($3C, $3E, $104, $B6, $12, $0F, $11);
-  U0098_028C($82, $2F, $BE, $39, $12, $0F, $11);
+  DrawPanel3D($3C, $3E, $104, $B6, $12, $0F, $11);
+  DrawPanel3D($82, $2F, $BE, $39, $12, $0F, $11);
   SetColor(10);
   OutTextXY($A0, $37, 'Team Setup');
-  U0098_028C($82, $BB, $BE, $C5, $12, $0F, $11);
+  DrawPanel3D($82, $BB, $BE, $C5, $12, $0F, $11);
   SetColor(5);
   SetTextJustify(1, 2);
   OutTextXY($A0, $BA, '-- Done --');
@@ -692,222 +692,222 @@ begin
   SetColor(14);
   OutTextXY($40, $3E, 'Team # -->');
   SetTextJustify(1, 2);
-  for g_461E := 1 to 10 do
+  for LoopI := 1 to 10 do
   begin
-    if g_461E > g_46B4 then SetColor(0);
-    OutTextXY(10 * g_461E + $8C, $3E, U2918_02FE(g_461E));
-    for g_4620 := 1 to g_46B4 do
-      if Players_3F0E[g_4620].Team = g_461E then
+    if LoopI > NumPlayers then SetColor(0);
+    OutTextXY(10 * LoopI + $8C, $3E, IntToStr(LoopI));
+    for LoopJ := 1 to NumPlayers do
+      if Players[LoopJ].Team = LoopI then
       begin
-        Players_3F0E[g_4620].X := 10 * g_461E + $8C;
-        Players_3F0E[g_4620].Y := 10 * g_4620 + $47;
-        Players_3F0E[g_4620].Men := 100;
-        U0098_07A3(g_4620);
+        Players[LoopJ].X := 10 * LoopI + $8C;
+        Players[LoopJ].Y := 10 * LoopJ + $47;
+        Players[LoopJ].Men := 100;
+        DrawTank(LoopJ);
       end;
   end;
   SetTextJustify(0, 2);
-  for g_461E := 1 to 10 do
+  for LoopI := 1 to 10 do
   begin
-    U26A9_01B0(100, Players_3F0E[g_461E]);
-    if g_461E > g_46B4 then SetColor(0) else SetColor(g_461E + 19);
-    OutTextXY($40, 10 * g_461E + $3E, Players_3F0E[g_461E].Name);
+    SetPlayerColor(100, Players[LoopI]);
+    if LoopI > NumPlayers then SetColor(0) else SetColor(LoopI + 19);
+    OutTextXY($40, 10 * LoopI + $3E, Players[LoopI].Name);
   end;
   Sel := 1;
-  g_462F := 0;
-  g_E7C8(19, 63, 63, 63);
+  DoneFlag := 0;
+  RGBHook(19, 63, 63, 63);
   repeat
-    U0098_03A8($37, 10 * Sel + $44);
+    DrawPlusMark($37, 10 * Sel + $44);
     Old := Sel;
-    U2968_004D;
+    ShowMouseCursor;
     Down := False;
     Up := False;
     repeat
       if KeyPressed then
       begin
-        g_46C9 := UpCase(ReadKey);
-        if g_46C9 in [#13, #27, 'D'] then
+        KeyChar := UpCase(ReadKey);
+        if KeyChar in [#13, #27, 'D'] then
         begin
           Sel := 11;
           Down := True;
         end;
-        if g_46C9 = #0 then
+        if KeyChar = #0 then
         begin
-          g_46C9 := ReadKey;
-          if (g_46C9 = KeyUp_3716) and (Sel > 1) then Dec(Sel);
-          if (g_46C9 = KeyDn_3717) and (Sel < g_46B4) then Inc(Sel);
-          if g_46C9 = KeyRt_3718 then Up := True;
-          if g_46C9 = KeyLt_3719 then Down := True;
+          KeyChar := ReadKey;
+          if (KeyChar = ScanUp) and (Sel > 1) then Dec(Sel);
+          if (KeyChar = ScanDown) and (Sel < NumPlayers) then Inc(Sel);
+          if KeyChar = ScanRight then Up := True;
+          if KeyChar = ScanLeft then Down := True;
         end;
       end;
-      if U2968_0077(1) or U2968_0077(2) then
+      if MouseBtnsDown(1) or MouseBtnsDown(2) then
       begin
-        g_4624 := U2918_022A;
-        g_4626 := U2918_0256;
-        if (g_4624 > $3C) and (g_4624 < $104) then
-          for g_461E := 1 to g_46B4 do
-            if (10 * g_461E + $47 >= g_4626) and (10 * g_461E + $40 <= g_4626) then
+        TmpX := MouseX;
+        TmpY := MouseY;
+        if (TmpX > $3C) and (TmpX < $104) then
+          for LoopI := 1 to NumPlayers do
+            if (10 * LoopI + $47 >= TmpY) and (10 * LoopI + $40 <= TmpY) then
             begin
-              Sel := g_461E;
-              if U2968_0077(1) then Down := True;
-              if U2968_0077(2) then Up := True;
+              Sel := LoopI;
+              if MouseBtnsDown(1) then Down := True;
+              if MouseBtnsDown(2) then Up := True;
               Delay(40);
             end;
-        if (g_4624 > $82) and (g_4624 < $BE) and (g_4626 > $BB) and (g_4626 < $C5) then
+        if (TmpX > $82) and (TmpX < $BE) and (TmpY > $BB) and (TmpY < $C5) then
         begin
           Sel := 11;
           Down := True;
         end;
       end;
     until (Old <> Sel) or Down or Up;
-    U2968_005A;
-    U0098_03F4($37, 10 * Old + $44, SaveBuf_E496);
+    HideMouseCursor;
+    ErasePlusMark($37, 10 * Old + $44, SaveBuf);
     if Down or Up then
       case Sel of
         1..10:
           begin
-            U2823_0088(10 * Players_3F0E[Sel].Team + $8C - 5, 10 * Sel + $47,
-                       10 * Players_3F0E[Sel].Team + $8C + 5, 10 * Sel + $3F, $12);
-            if Down and (Players_3F0E[Sel].Team > 1) then Dec(Players_3F0E[Sel].Team);
-            if Up and (Players_3F0E[Sel].Team < g_46B4) then Inc(Players_3F0E[Sel].Team);
-            Players_3F0E[Sel].X := 10 * Players_3F0E[Sel].Team + $8C;
-            Players_3F0E[Sel].Y := 10 * Sel + $47;
-            U0098_07A3(Sel);
+            FillBar(10 * Players[Sel].Team + $8C - 5, 10 * Sel + $47,
+                       10 * Players[Sel].Team + $8C + 5, 10 * Sel + $3F, $12);
+            if Down and (Players[Sel].Team > 1) then Dec(Players[Sel].Team);
+            if Up and (Players[Sel].Team < NumPlayers) then Inc(Players[Sel].Team);
+            Players[Sel].X := 10 * Players[Sel].Team + $8C;
+            Players[Sel].Y := 10 * Sel + $47;
+            DrawTank(Sel);
           end;
-        11: g_462F := 1;
+        11: DoneFlag := 1;
       end;
-  until g_462F <> 0;
-  g_462F := 0;
-  for g_461E := 1 to g_46B4 do
-    if Players_3F0E[g_461E].Team <> Players_3F0E[1].Team then g_462F := 1;
-  g_4628 := 0;
-  for g_461E := 1 to g_46B4 do
+  until DoneFlag <> 0;
+  DoneFlag := 0;
+  for LoopI := 1 to NumPlayers do
+    if Players[LoopI].Team <> Players[1].Team then DoneFlag := 1;
+  TmpR := 0;
+  for LoopI := 1 to NumPlayers do
   begin
-    g_4622 := 0;
-    for g_4620 := 1 to g_46B4 do
-      if Players_3F0E[g_4620].Team = g_461E then Inc(g_4622);
-    if g_4622 > g_4628 then g_4628 := g_4622;
+    LoopK := 0;
+    for LoopJ := 1 to NumPlayers do
+      if Players[LoopJ].Team = LoopI then Inc(LoopK);
+    if LoopK > TmpR then TmpR := LoopK;
   end;
-  if g_4628 < 2 then g_462F := 0;
-  if g_462F = 0 then
+  if TmpR < 2 then DoneFlag := 0;
+  if DoneFlag = 0 then
   begin
-    repeat until not U2968_0077(1) and not U2968_0077(2);
+    repeat until not MouseBtnsDown(1) and not MouseBtnsDown(2);
     SetColor(6);
-    U0098_028C($5A, $72, $E6, $8E, $12, $0F, $11);
+    DrawPanel3D($5A, $72, $E6, $8E, $12, $0F, $11);
     SetTextJustify(1, 2);
     OutTextXY($A0, $70, 'Team play canceled due');
     OutTextXY($A0, $7A, 'to extreme stupidity.');
-    SetTextStyle(g_E7EC, 0, 1);
+    SetTextStyle(FontTiny, 0, 1);
     SetUserCharSize(1, 1, 1, 1);
     SetTextJustify(1, 2);
     SetColor(4);
     OutTextXY($A0, $81, 'PRESS ANY KEY TO CONTINUE...');
-    repeat until KeyPressed or U2968_0077(1) or U2968_0077(2);
+    repeat until KeyPressed or MouseBtnsDown(1) or MouseBtnsDown(2);
     KbdHead := KbdTail;   { flush BIOS keyboard buffer }
-    g_E791 := 0;
-    for g_461E := 1 to 10 do Players_3F0E[g_461E].Team := g_461E;
+    TeamPlay := 0;
+    for LoopI := 1 to 10 do Players[LoopI].Team := LoopI;
   end;
-  if g_462F <> 0 then ;
+  if DoneFlag <> 0 then ;
 end;
 
 { edit the name of team T in a small dialog box }
-procedure U0728_302C(T: Integer);
+procedure EditTeamName(T: Integer);
 var
   Pos, NewPos, J, Unused1, Unused2: Integer;
   Done, Changed: Boolean;
 
   { draw the block cursor under character Pos }
-  {#U0728_2D41} procedure U0728_2D41;
+  {#U0728_2D41} procedure DrawTeamNameCursor;
   begin
-    U2823_0031((Pos - 1) * 6 + $8F - 1, $64, (Pos - 1) * 6 + $8F + 4, $6E, $12);
-    U2823_0031((Pos - 1) * 6 + $8F, $65, (Pos - 1) * 6 + $8F + 3, $6D, $12);
-    U2823_0031((Pos - 1) * 6 + $8F + 1, $66, (Pos - 1) * 6 + $8F + 2, $6C, $12);
+    DrawRect((Pos - 1) * 6 + $8F - 1, $64, (Pos - 1) * 6 + $8F + 4, $6E, $12);
+    DrawRect((Pos - 1) * 6 + $8F, $65, (Pos - 1) * 6 + $8F + 3, $6D, $12);
+    DrawRect((Pos - 1) * 6 + $8F + 1, $66, (Pos - 1) * 6 + $8F + 2, $6C, $12);
     SetColor(0);
-    OutTextXY((Pos - 1) * 6 + $8F, $68, Copy(Teams_4712[T].Name, Pos, 1));
-    U2823_00CC((Pos - 1) * 6 + $8F - 1, $6D, (Pos - 1) * 6 + $8F + 4, $6E, SaveBuf_E496);
+    OutTextXY((Pos - 1) * 6 + $8F, $68, Copy(Teams[T].Name, Pos, 1));
+    CopyBar((Pos - 1) * 6 + $8F - 1, $6D, (Pos - 1) * 6 + $8F + 4, $6E, SaveBuf);
   end;
 
   { remove the cursor again }
-  {#U0728_2E8E} procedure U0728_2E8E;
+  {#U0728_2E8E} procedure HideTeamNameCursor;
   begin
-    U2823_0031((Pos - 1) * 6 + $8F - 1, $64, (Pos - 1) * 6 + $8F + 4, $6E, $12);
-    U2823_0031((Pos - 1) * 6 + $8F, $65, (Pos - 1) * 6 + $8F + 3, $6D, $12);
-    U2823_0031((Pos - 1) * 6 + $8F + 1, $66, (Pos - 1) * 6 + $8F + 2, $6C, $12);
+    DrawRect((Pos - 1) * 6 + $8F - 1, $64, (Pos - 1) * 6 + $8F + 4, $6E, $12);
+    DrawRect((Pos - 1) * 6 + $8F, $65, (Pos - 1) * 6 + $8F + 3, $6D, $12);
+    DrawRect((Pos - 1) * 6 + $8F + 1, $66, (Pos - 1) * 6 + $8F + 2, $6C, $12);
     SetColor(0);
-    OutTextXY((Pos - 1) * 6 + $8F, $68, Copy(Teams_4712[T].Name, Pos, 1));
+    OutTextXY((Pos - 1) * 6 + $8F, $68, Copy(Teams[T].Name, Pos, 1));
   end;
 
 {#U0728_302C}
 begin
-  if Length(Teams_4712[T].Name) < 19 then
-    for J := Length(Teams_4712[T].Name) + 1 to 13 do Teams_4712[T].Name[J] := ' ';
-  U0098_028C($87, $55, $EB, $73, $12, $0F, $11);
+  if Length(Teams[T].Name) < 19 then
+    for J := Length(Teams[T].Name) + 1 to 13 do Teams[T].Name[J] := ' ';
+  DrawPanel3D($87, $55, $EB, $73, $12, $0F, $11);
   SetTextJustify(0, 2);
   SetUserCharSize(1, 1, 1, 1);
   SetColor(5);
   OutTextXY($8A, $55, 'New Team Name:');
-  U0098_028C($8C, $64, $E6, $6E, $12, $11, $0F);
+  DrawPanel3D($8C, $64, $E6, $6E, $12, $11, $0F);
   SetTextJustify(0, 1);
   SetColor(0);
-  for Pos := 1 to Length(Teams_4712[T].Name) do
-    OutTextXY((Pos - 1) * 6 + $8F, $68, Copy(Teams_4712[T].Name, Pos, 1));
-  Inc(Teams_4712[T].Name[0]);
-  Pos := Length(Teams_4712[T].Name);
+  for Pos := 1 to Length(Teams[T].Name) do
+    OutTextXY((Pos - 1) * 6 + $8F, $68, Copy(Teams[T].Name, Pos, 1));
+  Inc(Teams[T].Name[0]);
+  Pos := Length(Teams[T].Name);
   Done := False;
   repeat
-    U0728_2D41;
+    DrawTeamNameCursor;
     Changed := False;
     repeat
       repeat until KeyPressed;
-      g_46C9 := ReadKey;
-      if (g_46C9 in [#8]) and (Pos > 1) then
+      KeyChar := ReadKey;
+      if (KeyChar in [#8]) and (Pos > 1) then
       begin
         NewPos := Pos - 1;
-        Teams_4712[T].Name[NewPos] := ' ';
+        Teams[T].Name[NewPos] := ' ';
         Changed := True;
       end;
-      if g_46C9 in [#13, #27] then
+      if KeyChar in [#13, #27] then
       begin
         Done := True;
         Changed := True;
       end;
-      if g_46C9 in [' '..'}'] then
+      if KeyChar in [' '..'}'] then
       begin
-        Teams_4712[T].Name[Pos] := g_46C9;
+        Teams[T].Name[Pos] := KeyChar;
         Changed := True;
         NewPos := Pos + 1;
-        if Length(Teams_4712[T].Name) < NewPos then Inc(Teams_4712[T].Name[0]);
+        if Length(Teams[T].Name) < NewPos then Inc(Teams[T].Name[0]);
       end;
-      if g_46C9 = #0 then
+      if KeyChar = #0 then
       begin
-        g_46C9 := ReadKey;
-        if g_46C9 = 'G' then            { Home: clear }
+        KeyChar := ReadKey;
+        if KeyChar = 'G' then            { Home: clear }
         begin
-          for Pos := Length(Teams_4712[T].Name) downto 1 do
+          for Pos := Length(Teams[T].Name) downto 1 do
           begin
-            Teams_4712[T].Name[Pos] := ' ';
-            U0728_2D41;
-            U0728_2E8E;
+            Teams[T].Name[Pos] := ' ';
+            DrawTeamNameCursor;
+            HideTeamNameCursor;
           end;
-          Teams_4712[T].Name := '  ';
+          Teams[T].Name := '  ';
           NewPos := 1;
         end;
-        if g_46C9 = 'S' then            { Del }
+        if KeyChar = 'S' then            { Del }
         begin
-          Teams_4712[T].Name[Pos] := ' ';
+          Teams[T].Name[Pos] := ' ';
           Changed := True;
           NewPos := Pos;
         end;
-        if g_46C9 = 'O' then            { End }
+        if KeyChar = 'O' then            { End }
         begin
           Changed := True;
-          NewPos := Length(Teams_4712[T].Name);
+          NewPos := Length(Teams[T].Name);
         end;
-        if (g_46C9 = KeyLt_3719) and (Pos > 1) then
+        if (KeyChar = ScanLeft) and (Pos > 1) then
         begin
           NewPos := Pos - 1;
           Changed := True;
         end;
-        if (g_46C9 = KeyRt_3718) and (Length(Teams_4712[T].Name) > Pos) then
+        if (KeyChar = ScanRight) and (Length(Teams[T].Name) > Pos) then
         begin
           NewPos := Pos + 1;
           Changed := True;
@@ -915,91 +915,91 @@ begin
       end;
     until Changed = True;
     if NewPos > 13 then NewPos := 13;
-    if Length(Teams_4712[T].Name) > 13 then Teams_4712[T].Name[0] := #13;
-    U0728_2E8E;
+    if Length(Teams[T].Name) > 13 then Teams[T].Name[0] := #13;
+    HideTeamNameCursor;
     Pos := NewPos;
   until Done;
-  while (Teams_4712[T].Name[Length(Teams_4712[T].Name)] in [#0, ' ']) and
-        (Length(Teams_4712[T].Name) > 0) do
-    Dec(Teams_4712[T].Name[0]);
+  while (Teams[T].Name[Length(Teams[T].Name)] in [#0, ' ']) and
+        (Length(Teams[T].Name) > 0) do
+    Dec(Teams[T].Name[0]);
 end;
 
 { build the team table from the players' team numbers; show each team,
   let humans name their team, give computer-only teams a random name }
 {#U0728_3449}
-procedure U0728_3449;
+procedure BuildTeams;
 var
   T, P: Integer;
 begin
-  FillChar(Teams_4712, SizeOf(Teams_4712), 0);
-  g_4622 := 0;
-  for g_461E := 1 to g_46B4 do
+  FillChar(Teams, SizeOf(Teams), 0);
+  LoopK := 0;
+  for LoopI := 1 to NumPlayers do
   begin
-    Teams_4712[g_461E].f0E := 1;
-    for g_4620 := 1 to g_46B4 do
-      if Players_3F0E[g_4620].Team = g_461E then
+    Teams[LoopI].f0E := 1;
+    for LoopJ := 1 to NumPlayers do
+      if Players[LoopJ].Team = LoopI then
       begin
-        Inc(Teams_4712[g_461E].f0F);
-        if Control_E480[g_4620] <> 3 then Teams_4712[g_461E].f0E := 0;
+        Inc(Teams[LoopI].f0F);
+        if Controls[LoopJ] <> 3 then Teams[LoopI].f0E := 0;
       end;
-    if Teams_4712[g_461E].f0F <> 0 then Inc(g_4622);
-    Teams_4712[g_461E].Name := 'Team ' + U2918_02FE(g_4622);
-    if Teams_4712[g_461E].f0F = 1 then
-      for g_4620 := 1 to g_46B4 do
-        if Players_3F0E[g_4620].Team = g_461E then
-          Teams_4712[g_461E].Name := Players_3F0E[g_4620].Name;
+    if Teams[LoopI].f0F <> 0 then Inc(LoopK);
+    Teams[LoopI].Name := 'Team ' + IntToStr(LoopK);
+    if Teams[LoopI].f0F = 1 then
+      for LoopJ := 1 to NumPlayers do
+        if Players[LoopJ].Team = LoopI then
+          Teams[LoopI].Name := Players[LoopJ].Name;
   end;
-  for T := 1 to g_46B4 do
-    if Teams_4712[T].f0F > 0 then
+  for T := 1 to NumPlayers do
+    if Teams[T].f0F > 0 then
     begin
-      U0098_028C($0A, $32, $6E, $3C, $12, $0F, $11);
+      DrawPanel3D($0A, $32, $6E, $3C, $12, $0F, $11);
       SetTextStyle(2, 0, 4);
       SetUserCharSize(1, 1, 1, 1);
       SetTextJustify(0, 2);
       SetColor(6);
-      OutTextXY($0F, $32, 'Team #' + U2918_02FE(T) + ':');
+      OutTextXY($0F, $32, 'Team #' + IntToStr(T) + ':');
       SetTextJustify(0, 2);
-      g_4622 := 0;
-      for P := 1 to g_46B4 do
-        if Players_3F0E[P].Team = T then
+      LoopK := 0;
+      for P := 1 to NumPlayers do
+        if Players[P].Team = T then
         begin
-          Inc(g_4622);
+          Inc(LoopK);
           SetColor(P + 19);
-          U0098_028C($14, 15 * g_4622 + $34, $78, 15 * g_4622 + $34 + 10, $12, $0F, $11);
-          OutTextXY($19, 15 * g_4622 + $33, Players_3F0E[P].Name);
+          DrawPanel3D($14, 15 * LoopK + $34, $78, 15 * LoopK + $34 + 10, $12, $0F, $11);
+          OutTextXY($19, 15 * LoopK + $33, Players[P].Name);
         end;
-      if Teams_4712[T].f0E = 0 then
-        U0728_302C(T)
-      else if Teams_4712[T].f0F > 1 then
+      if Teams[T].f0E = 0 then
+        EditTeamName(T)
+      else if Teams[T].f0F > 1 then
         repeat
-          g_462E := 1;
+          DoneFlag2 := 1;
           case Random(11) of
-            0: Teams_4712[T].Name := 'Bushwackers';
-            1: Teams_4712[T].Name := 'Crazy CPUs';
-            2: Teams_4712[T].Name := 'Tank Trashers';
-            3: Teams_4712[T].Name := 'Studs';
-            4: Teams_4712[T].Name := 'Human Mashers';
-            5: Teams_4712[T].Name := 'Crackshots';
-            6: Teams_4712[T].Name := 'Dungheaps';
-            7: Teams_4712[T].Name := 'Ugly Ducks';
-            8: Teams_4712[T].Name := 'Martians';
-            9: Teams_4712[T].Name := 'Gravy';
-            10: Teams_4712[T].Name := 'Boneheads';
+            0: Teams[T].Name := 'Bushwackers';
+            1: Teams[T].Name := 'Crazy CPUs';
+            2: Teams[T].Name := 'Tank Trashers';
+            3: Teams[T].Name := 'Studs';
+            4: Teams[T].Name := 'Human Mashers';
+            5: Teams[T].Name := 'Crackshots';
+            6: Teams[T].Name := 'Dungheaps';
+            7: Teams[T].Name := 'Ugly Ducks';
+            8: Teams[T].Name := 'Martians';
+            9: Teams[T].Name := 'Gravy';
+            10: Teams[T].Name := 'Boneheads';
           end;
-          for g_4620 := 1 to g_46B4 do
-            if (Teams_4712[T].Name = Teams_4712[g_4620].Name) and (T <> g_4620) then
-              g_462E := 0;
-        until g_462E <> 0;
-      g_4622 := 0;
-      for P := 1 to g_46B4 do
-        if Players_3F0E[P].Team = T then
+          for LoopJ := 1 to NumPlayers do
+            if (Teams[T].Name = Teams[LoopJ].Name) and (T <> LoopJ) then
+              DoneFlag2 := 0;
+        until DoneFlag2 <> 0;
+      LoopK := 0;
+      for P := 1 to NumPlayers do
+        if Players[P].Team = T then
         begin
-          Inc(g_4622);
-          U2823_00CC($12, 15 * g_4622 + $34 - 2, $7A, 15 * g_4622 + $34 + 10 + 2, SaveBuf_E496);
+          Inc(LoopK);
+          CopyBar($12, 15 * LoopK + $34 - 2, $7A, 15 * LoopK + $34 + 10 + 2, SaveBuf);
         end;
     end;
-  for g_4624 := $67 to $FA do
-    U2823_0AC0(g_4624, 0, g_4624, $C7, SaveBuf_E496);
+  for TmpX := $67 to $FA do
+    CopyLine(TmpX, 0, TmpX, $C7, SaveBuf);
 end;
 
 
